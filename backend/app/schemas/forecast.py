@@ -44,11 +44,13 @@ class ForecastResponse(BaseModel):
     currency: str = "INR"
     currency_symbol: str = "₹"
     sku: Optional[str] = None
+    category: Optional[str] = None
     product_name: Optional[str] = None
     total_historical_sales: Optional[int] = None
     total_predicted_demand: Optional[int] = None
     total_actual_revenue: Optional[float] = None
     total_projected_revenue: Optional[float] = None
+    projected_change_pct: Optional[float] = None
     points: List[ForecastTimelinePoint]
 
 class SeasonalityDriver(BaseModel):

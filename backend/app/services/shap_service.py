@@ -21,13 +21,18 @@ class ShapService:
             { "feature": "Competitor Price Gap", "importance": 0.38, "category": "Market Signal", "description": "Delta between current shelf price and primary retail competitor index" },
             { "feature": "Historical Elasticity", "importance": 0.24, "category": "Demand Model", "description": "Log-log regression responsiveness coefficient over past 90 days" },
             { "feature": "Inventory Days-on-Hand", "importance": 0.16, "category": "Supply Chain", "description": "Ratio of on-hand inventory units to weekly sales velocity" },
-            { "feature": "Cost Floor & Margin Guardrails", "importance": 0.12, "category": "Margin Protection", "description": "Minimum cost markup floor preventing below-cost margin loss" },
+            { "feature": "Cost Floor & Margin Guardrails", "importance": 0.12, "category": "Margin Protection", "description": "Minimum gross-margin floor preventing below-cost or sub-margin margin loss" },
             { "feature": "Customer Review Rating", "importance": 0.06, "category": "Brand Equity", "description": "Aggregate customer feedback sentiment and star rating index" },
             { "feature": "Seasonal Demand Lift", "importance": 0.04, "category": "Seasonality", "description": "Cyclical holiday, weekend, and temperature trend weight multipliers" }
         ]
 
     @staticmethod
-    def get_product_shap(db: Session, sku_or_id: str) -> Dict[str, Any]:
+    def get_product_shap(
+        db: Session,
+        sku_or_id: str,
+        target_price: Optional[float] = None,
+        min_margin_pct: Optional[float] = None
+    ) -> Dict[str, Any]:
         product = db.query(Product).filter(or_(Product.sku == sku_or_id, Product.id == sku_or_id)).first()
         if not product:
             product = db.query(Product).first()
@@ -51,10 +56,46 @@ class ShapService:
                 "r2_score": None
             }
 
-        # Check if there is an active recommendation in DB to align recommended price
+        from ..models.pricing_decision import PricingDecision
+
         rec = db.query(PricingRecommendation).filter(PricingRecommendation.product_id == product.id).first()
-        rec_price = rec.recommended_price if rec else None
-        context = {"recommended_price": rec_price} if rec_price is not None else None
+        decisions = (
+            db.query(PricingDecision)
+            .filter(PricingDecision.product_id == product.id)
+            .order_by(PricingDecision.created_at.desc())
+            .all()
+        )
+        override_dec = next((d for d in decisions if d.decision in ("OVERRIDDEN_BELOW_COST", "OVERRIDDEN")), None)
+
+        if target_price is not None:
+            chosen_price = float(target_price)
+        elif rec is not None:
+            chosen_price = rec.recommended_price
+        else:
+            chosen_price = product.current_price
+
+        is_override = bool(
+            chosen_price < product.cost_price
+            or (override_dec and chosen_price == override_dec.approved_price)
+            or (rec and "override" in (rec.reason or "").lower())
+        )
+
+        override_reason = None
+        if is_override:
+            if rec and "override" in (rec.reason or "").lower():
+                override_reason = rec.reason
+            elif override_dec:
+                override_reason = override_dec.decision
+
+        context = {
+            "recommended_price": chosen_price,
+            "min_margin_pct": min_margin_pct,
+            "is_historical_override": is_override,
+            "override_decision": override_dec.decision if override_dec else None,
+            "override_reason": override_reason,
+            "override_user": override_dec.user if override_dec else "Executive Authorization",
+            "status": rec.status if rec else "Pending Approval"
+        }
 
         if _explainability_engine:
             return _explainability_engine.explain_product_pricing(product, context=context)

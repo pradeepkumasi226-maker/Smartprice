@@ -1,4 +1,5 @@
 import time
+import math
 from typing import List, Optional, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import or_
@@ -15,6 +16,47 @@ except Exception:
 
 class PricingService:
     @staticmethod
+    def calculate_margin_floor(cost_price: float, min_margin_pct: float = 5.0) -> float:
+        """
+        Calculates the minimum selling price required to achieve a specified gross margin:
+            floor_price = cost_price / (1 - margin_fraction)
+        where margin_fraction = min_margin_pct / 100.0.
+
+        Validates inputs:
+        - cost_price cannot be negative, NaN, or infinite.
+        - min_margin_pct must be finite, >= 0.0, and < 100.0.
+        """
+        if cost_price is None:
+            raise ValueError("Cost price cannot be None.")
+        try:
+            c = float(cost_price)
+        except (TypeError, ValueError):
+            raise ValueError(f"Cost price must be a valid number: {cost_price}")
+
+        if math.isnan(c) or math.isinf(c):
+            raise ValueError(f"Cost price must be a finite number: {cost_price}")
+        if c < 0:
+            raise ValueError(f"Cost price cannot be negative: ₹{c:.2f}")
+
+        if min_margin_pct is None:
+            min_margin_pct = 5.0
+        try:
+            m = float(min_margin_pct)
+        except (TypeError, ValueError):
+            raise ValueError(f"Minimum margin percentage must be a valid number: {min_margin_pct}")
+
+        if math.isnan(m) or math.isinf(m):
+            raise ValueError(f"Minimum margin percentage must be a finite number: {min_margin_pct}")
+        if m < 0.0:
+            raise ValueError(f"Minimum gross margin percentage cannot be negative: {m}%")
+        if m >= 100.0:
+            raise ValueError(f"Minimum gross margin percentage must be strictly less than 100%: {m}%")
+
+        margin_fraction = m / 100.0
+        floor_price = round(c / (1.0 - margin_fraction), 2)
+        return floor_price
+
+    @staticmethod
     def calculate_product_recommendation(
         product: Product,
         guardrails: Optional[Dict[str, Any]] = None,
@@ -24,7 +66,8 @@ class PricingService:
         force_recalculate: bool = False
     ) -> Dict[str, Any]:
         guardrails = guardrails or {}
-        min_margin_pct = float(guardrails.get("min_margin_pct", 5.0))
+        raw_margin = guardrails.get("min_margin_pct", 5.0)
+        min_margin_pct = 5.0 if raw_margin is None else float(raw_margin)
         max_price_change_pct = float(guardrails.get("max_price_change_pct", 30.0))
         allow_below_cost = bool(guardrails.get("allow_below_cost", False))
 
@@ -59,7 +102,8 @@ class PricingService:
         # 1. Guardrail boundaries
         cost_floor = cost_p
         min_allowed_price = cost_p if not allow_below_cost else 0.01
-        min_guardrail = max(min_allowed_price, round(cost_p * (1 + min_margin_pct / 100), 2))
+        margin_floor = PricingService.calculate_margin_floor(cost_p, min_margin_pct)
+        min_guardrail = max(min_allowed_price, margin_floor) if not allow_below_cost else min_allowed_price
         max_guardrail = round(current_p * (1 + max_price_change_pct / 100), 2)
 
         # 2. Inventory Scarcity / Surplus analysis

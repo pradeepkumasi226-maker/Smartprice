@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List, Dict, Any
 from ...database import get_db
-from ..schemas.inventory import RestockRequest, BatchRestockRequest, InventoryTransactionResponse, InventorySummary
+from ..schemas.inventory import (
+    RestockRequest,
+    BatchRestockRequest,
+    InventoryTransactionResponse,
+    InventorySummary,
+    InventoryReconciliationResponse
+)
 from ..services.inventory_service import InventoryService
 from ..services.product_service import ProductService
 from ..models.user import User
@@ -16,7 +22,7 @@ INVENTORY_ROLES = ["Retail Operations Manager", "Store Operations Director", "Re
 def get_inventory_overview(db: Session = Depends(get_db)):
     summary = InventoryService.get_summary(db)
     products = ProductService.get_products(db)
-    transactions = InventoryService.get_transactions(db, limit=50)
+    transactions = InventoryService.get_transactions(db, limit=100)
     return {
         "summary": summary,
         "products": products,
@@ -27,8 +33,12 @@ def get_inventory_overview(db: Session = Depends(get_db)):
 def get_inventory_summary(db: Session = Depends(get_db)):
     return InventoryService.get_summary(db)
 
+@router.get("/reconciliation", response_model=InventoryReconciliationResponse)
+def get_inventory_reconciliation(db: Session = Depends(get_db)):
+    return InventoryService.get_reconciliation(db)
+
 @router.get("/transactions", response_model=List[InventoryTransactionResponse])
-def get_inventory_transactions(limit: int = 50, db: Session = Depends(get_db)):
+def get_inventory_transactions(limit: int = 100, db: Session = Depends(get_db)):
     return InventoryService.get_transactions(db, limit=limit)
 
 @router.get("/{sku}")

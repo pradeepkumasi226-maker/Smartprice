@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 from datetime import datetime
 
 class RestockRequest(BaseModel):
@@ -37,7 +37,23 @@ class InventorySummary(BaseModel):
     total_units: int
     total_inventory_value: float
     total_cost_value: float
+    cost_valuation: Optional[float] = None
+    retail_valuation: Optional[float] = None
+    authoritative_source: Optional[str] = "products.stock_quantity"
+    total_transactions: Optional[int] = None
     optimal_count: int
     low_stock_count: int
     critical_count: int
     overstocked_count: int
+
+class InventoryReconciliationResponse(BaseModel):
+    status: str
+    authoritative_source: str
+    total_products: int
+    total_units: int
+    valuation_wholesale_cost: float
+    valuation_retail_shelf: float
+    total_ledger_transactions: int
+    product_balances: List[Dict[str, Any]]
+    discrepancy_analysis: Dict[str, Any]
+    reconciled_at: datetime

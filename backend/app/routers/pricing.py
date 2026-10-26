@@ -34,7 +34,10 @@ def get_pricing_recommendations(
     if allow_below_cost is not None:
         guardrails["allow_below_cost"] = allow_below_cost
 
-    return PricingService.get_recommendations(db, include_all=include_all, guardrails=guardrails)
+    try:
+        return PricingService.get_recommendations(db, include_all=include_all, guardrails=guardrails)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/generate", response_model=List[PricingRecommendationResponse])
 def generate_pricing_recommendations(
@@ -54,11 +57,13 @@ def generate_pricing_recommendations(
 
     try:
         guardrails = {
-            "min_margin_pct": payload.min_margin_pct or 5.0,
-            "max_price_change_pct": payload.max_price_change_pct or 30.0,
+            "min_margin_pct": payload.min_margin_pct if payload.min_margin_pct is not None else 5.0,
+            "max_price_change_pct": payload.max_price_change_pct if payload.max_price_change_pct is not None else 30.0,
             "allow_below_cost": payload.allow_below_cost or False
         }
         return PricingService.generate_all_recommendations(db, guardrails=guardrails)
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except Exception as e:
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Dynamic Pricing Engine execution failed: {str(e)}")
 
@@ -137,8 +142,8 @@ def recalculate_pricing_recommendation(
         guardrails = None
         if payload:
             guardrails = {
-                "min_margin_pct": payload.min_margin_pct or 5.0,
-                "max_price_change_pct": payload.max_price_change_pct or 30.0,
+                "min_margin_pct": payload.min_margin_pct if payload.min_margin_pct is not None else 5.0,
+                "max_price_change_pct": payload.max_price_change_pct if payload.max_price_change_pct is not None else 30.0,
                 "allow_below_cost": payload.allow_below_cost or False
             }
         return PricingService.recalculate_recommendation(db=db, sku_or_id=sku, guardrails=guardrails)

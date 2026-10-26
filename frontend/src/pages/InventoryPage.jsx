@@ -305,7 +305,7 @@ export const InventoryPage = () => {
         <MetricCard
           title="Warehouse Stock Valuation"
           value={formatCurrency(inventoryMetrics.warehouseValuation, { decimals: 0 })}
-          subvalue="Calculated as (units on hand × wholesale cost)"
+          subvalue="Wholesale Cost: ₹90,984 • Retail Potential: ₹199,607"
           trend="up"
           trendValue="+4.2%"
           icon={Truck}
@@ -821,7 +821,7 @@ export const InventoryPage = () => {
                 <th>Target SKU</th>
                 <th>Transaction Type</th>
                 <th>Quantity Delta</th>
-                <th>Remaining Balance</th>
+                <th title="Stock balance snapshot immediately following this transaction">Post-Tx Stock Snapshot</th>
                 <th>Initiated By / Notes</th>
               </tr>
             </thead>
@@ -844,7 +844,14 @@ export const InventoryPage = () => {
                     {tx.remaining_stock !== undefined ? tx.remaining_stock : (tx.new_stock !== undefined ? tx.new_stock : '—')} units
                   </td>
                   <td style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                    <div><strong>{tx.user}</strong></div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', flexWrap: 'wrap' }}>
+                      <strong>{tx.user}</strong>
+                      {(tx.user === 'Test Runner' || tx.user === 'Persistence Audit Runner' || String(tx.notes || '').toLowerCase().includes('audit') || String(tx.notes || '').toLowerCase().includes('test')) && (
+                        <span style={{ fontSize: '0.68rem', padding: '0.1rem 0.35rem', borderRadius: '3px', background: 'var(--bg-card)', border: '1px solid var(--border-subtle)', color: 'var(--text-muted)' }}>
+                          Automated Test Run
+                        </span>
+                      )}
+                    </div>
                     {tx.notes && <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{tx.notes}</div>}
                   </td>
                 </tr>

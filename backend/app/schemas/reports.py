@@ -15,6 +15,8 @@ class CategorySalesBreakdown(BaseModel):
     units: int
     profit: float
     margin: str
+    cost: Optional[float] = None
+    reconciliation_status: Optional[str] = "reconciled"
 
 class PricingComplianceSummary(BaseModel):
     total_recommendations: int
@@ -42,6 +44,14 @@ class ReportsSummaryResponse(BaseModel):
     total_units_sold: int
     total_products_managed: int
     ai_adopted_revenue_lift: str
+    cost_of_goods_sold: Optional[float] = None
+    average_selling_price: Optional[float] = None
+    unallocated_cost: Optional[float] = 0.0
+    reconciliation_status: Optional[str] = "reconciled"
+    sum_category_revenue: Optional[float] = None
+    sum_category_profit: Optional[float] = None
+    profit_formula: Optional[str] = "revenue - cost"
+    margin_formula: Optional[str] = "(profit / revenue) * 100"
     store_breakdown: List[StoreSalesBreakdown]
     category_breakdown: List[CategorySalesBreakdown]
     pricing_compliance: PricingComplianceSummary

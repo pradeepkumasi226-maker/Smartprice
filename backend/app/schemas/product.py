@@ -43,6 +43,10 @@ class ProductResponse(ProductBase):
     id: str
     status: Optional[str] = "Optimal"  # Optimal, Low Stock, Critical, Overstocked
     recommended_price: Optional[float] = None
+    has_active_recommendation: Optional[bool] = False
+    has_historical_override: Optional[bool] = False
+    historical_override_price: Optional[float] = None
+    override_reason: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

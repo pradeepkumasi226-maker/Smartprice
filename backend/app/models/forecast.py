@@ -12,7 +12,7 @@ class Forecast(Base):
     predicted_demand = Column(Integer, nullable=False)
     lower_bound = Column(Integer, nullable=False)
     upper_bound = Column(Integer, nullable=False)
-    model_name = Column(String, default="NeuralProphet + XGBoost Ensemble v2.4")
+    model_name = Column(String, default="SmartPrice Baseline Demand Forecaster")
     created_at = Column(DateTime, default=datetime.utcnow)
 
     # Relationship

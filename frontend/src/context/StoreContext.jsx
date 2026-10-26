@@ -31,6 +31,20 @@ const loadFromStorage = (key, fallback) => {
   return fallback;
 };
 
+const DEFAULT_SETTINGS = {
+  minMargin: 25,
+  maxPriceChange: 20,
+  competitorMatchBuffer: 3.5,
+  requireHumanApproval: true,
+  modelConfidenceFloor: 85,
+  shapDepth: 'Full Additive (5 Factors)',
+  retrainFrequency: 'Daily at 02:00 AM',
+  emailAlerts: true,
+  stockoutAlerts: true,
+  competitorPriceDrops: true,
+  storeLocation: 'Downtown Flagship (Store #104), Metro Zone',
+};
+
 const defaultSavedScenarios = [
   {
     id: 'scen-1',
@@ -164,11 +178,14 @@ export const StoreProvider = ({ children }) => {
   const [savedScenarios, setSavedScenarios] = useState(() => loadFromStorage('smartprice_scenarios', defaultSavedScenarios));
 
   // Fetch live products from backend API
-  const fetchProducts = async () => {
+  const fetchProducts = async (options = {}) => {
     setProductsLoading(true);
     setProductsError(null);
     try {
-      const data = await apiService.getProducts();
+      const activeMargin = options.min_margin_pct !== undefined
+        ? Number(options.min_margin_pct)
+        : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const data = await apiService.getProducts({ min_margin_pct: activeMargin, ...options });
       if (Array.isArray(data) && data.length > 0) {
         setProducts(data);
         setIsOfflineMode(false);
@@ -184,10 +201,39 @@ export const StoreProvider = ({ children }) => {
     }
   };
 
+  const [settings, setSettings] = useState(() => {
+    const loaded = loadFromStorage('smartprice_settings', null);
+    return loaded ? { ...DEFAULT_SETTINGS, ...loaded } : DEFAULT_SETTINGS;
+  });
+
+  const updateSettings = async (newSettings) => {
+    const updated = { ...settings, ...newSettings };
+    setSettings(updated);
+    try {
+      localStorage.setItem('smartprice_settings', JSON.stringify(updated));
+    } catch (e) {
+      console.error('Failed to save smartprice_settings to localStorage:', e);
+    }
+    if (newSettings.minMargin !== undefined) {
+      await Promise.all([
+        fetchProducts({ min_margin_pct: Number(newSettings.minMargin) }),
+        fetchOptimizations({ include_all: true, min_margin_pct: Number(newSettings.minMargin) })
+      ]);
+    }
+    return updated;
+  };
+
   // Fetch live recommendations from backend API
   const fetchOptimizations = async (options = {}) => {
     try {
-      const data = await apiService.getOptimizations(options);
+      const activeMargin = options.min_margin_pct !== undefined
+        ? Number(options.min_margin_pct)
+        : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const mergedOptions = {
+        min_margin_pct: activeMargin,
+        ...options
+      };
+      const data = await apiService.getOptimizations(mergedOptions);
       if (Array.isArray(data) && data.length > 0) {
         const normalized = data.map(normalizeOptimization);
         setOptimizations(normalized);
@@ -251,7 +297,14 @@ export const StoreProvider = ({ children }) => {
 
   const generateAllRecommendations = async (guardrails = {}) => {
     try {
-      const data = await apiService.generateRecommendations(guardrails);
+      const activeMargin = guardrails.min_margin_pct !== undefined
+        ? Number(guardrails.min_margin_pct)
+        : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const mergedGuardrails = {
+        min_margin_pct: activeMargin,
+        ...guardrails
+      };
+      const data = await apiService.generateRecommendations(mergedGuardrails);
       if (Array.isArray(data) && data.length > 0) {
         const normalized = data.map(normalizeOptimization);
         setOptimizations(normalized);
@@ -1243,6 +1296,8 @@ export const StoreProvider = ({ children }) => {
       setSelectedStore,
       currency,
       setCurrency,
+      settings,
+      updateSettings,
       toasts,
       addToast,
       removeToast,

@@ -46,19 +46,30 @@ export const PriceOptimizationPage = () => {
     pageParams = {},
     searchQuery = '',
     setSearchQuery,
-    addToast
+    addToast,
+    settings
   } = useStore();
 
   const safeProducts = Array.isArray(products) ? products : [];
   const rawOptimizations = Array.isArray(optimizations) ? optimizations : [];
 
-  // Guardrail Configuration State
+  // Guardrail Configuration State (initialized from shared settings)
   const [showGuardrailPanel, setShowGuardrailPanel] = useState(false);
-  const [guardrailSettings, setGuardrailSettings] = useState({
-    minMargin: 5,            // % minimum margin over wholesale cost
-    maxPriceChange: 30,      // % maximum price increase/decrease cap
-    allowBelowCost: false    // Business rule permitting clearance sales below cost
-  });
+  const [guardrailSettings, setGuardrailSettings] = useState(() => ({
+    minMargin: settings?.minMargin !== undefined ? Number(settings.minMargin) : 25,
+    maxPriceChange: settings?.maxPriceChange !== undefined ? Number(settings.maxPriceChange) : 20,
+    allowBelowCost: false
+  }));
+
+  useEffect(() => {
+    if (settings?.minMargin !== undefined) {
+      setGuardrailSettings(prev => ({
+        ...prev,
+        minMargin: Number(settings.minMargin),
+        maxPriceChange: Number(settings.maxPriceChange ?? prev.maxPriceChange)
+      }));
+    }
+  }, [settings?.minMargin, settings?.maxPriceChange]);
 
   const [isEngineRunning, setIsEngineRunning] = useState(false);
   const [engineError, setEngineError] = useState(null);
@@ -102,7 +113,9 @@ export const PriceOptimizationPage = () => {
         else if (stock > reorder * 2.5) shift = -0.04;
         else if (compP > livePrice) shift = Math.min(0.08, ((compP - livePrice) / livePrice) * 0.7);
 
-        recPrice = Number(Math.max(costP * (1 + guardrailSettings.minMargin / 100), livePrice * (1 + shift)).toFixed(2));
+        const marginFraction = Math.min(Math.max((Number(guardrailSettings.minMargin) || 0) / 100, 0), 0.95);
+        const computedFloor = Number((costP / (1 - marginFraction)).toFixed(2));
+        recPrice = Number(Math.max(computedFloor, livePrice * (1 + shift)).toFixed(2));
         status = 'Pending Approval';
         guardrailStatus = 'Pass';
       }
@@ -154,8 +167,10 @@ export const PriceOptimizationPage = () => {
       const revLiftPct = curRev > 0 ? ((revLiftVal / curRev) * 100).toFixed(1) : '0.0';
       const profitLiftPct = curProfit > 0 ? ((profitLiftVal / curProfit) * 100).toFixed(1) : '0.0';
 
-      const minGuardrail = Number(Math.max(costP, costP * (1 + guardrailSettings.minMargin / 100)).toFixed(2));
-      const maxGuardrail = Number((livePrice * (1 + guardrailSettings.maxPriceChange / 100)).toFixed(2));
+      const marginFraction = Math.min(Math.max((Number(guardrailSettings.minMargin) || 0) / 100, 0), 0.95);
+      const computedFloor = Number((costP / (1 - marginFraction)).toFixed(2));
+      const minGuardrail = Number(match?.minGuardrail ?? match?.min_guardrail ?? (guardrailSettings.allowBelowCost ? 0.01 : Math.max(costP, computedFloor)));
+      const maxGuardrail = Number(match?.maxGuardrail ?? match?.max_guardrail ?? (livePrice * (1 + guardrailSettings.maxPriceChange / 100)).toFixed(2));
 
       return {
         id: match?.id || `opt-${prod.id}`,
@@ -542,7 +557,7 @@ export const PriceOptimizationPage = () => {
             </div>
 
             <div style={{ marginTop: '1rem', display: 'flex', justifyContent: 'flex-end', gap: '0.5rem' }}>
-              <button className="btn btn-secondary btn-sm" onClick={() => setGuardrailSettings({ minMargin: 5, maxPriceChange: 30, allowBelowCost: false })}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setGuardrailSettings({ minMargin: settings?.minMargin ?? 25, maxPriceChange: settings?.maxPriceChange ?? 20, allowBelowCost: false })}>
                 Reset Defaults
               </button>
               <button className="btn btn-primary btn-sm" onClick={handleRunPricingEngine}>

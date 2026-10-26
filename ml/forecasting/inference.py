@@ -47,10 +47,13 @@ class ForecastInferenceEngine:
         time_range: str = "7d",
         unit_price: float = 199.0,
         volume_scale: float = 1.0,
-        start_date: Optional[str] = None
+        start_date: Optional[str] = None,
+        target_volume: Optional[int] = None
     ) -> Dict[str, Any]:
         """
         Runs inference and maps output points to daily/weekly/monthly aggregated intervals.
+        If target_volume is provided, dynamically calibrates volume_scale and performs exact
+        integer reconciliation so the sum of predicted_demand points equals target_volume.
         """
         model = self.get_model()
         if model is None:
@@ -59,11 +62,14 @@ class ForecastInferenceEngine:
         if time_range == "7d":
             horizon_days = 7
             raw_points = model.predict(horizon_days=horizon_days, start_date=start_date)
+            raw_sum = sum(p["predicted_demand"] for p in raw_points)
+            eff_scale = (target_volume / raw_sum) if (target_volume is not None and raw_sum > 0) else volume_scale
+
             points = []
             for pt in raw_points:
-                pred = max(1, round(pt["predicted_demand"] * volume_scale))
-                lower = max(0, round(pt["lower_bound"] * volume_scale))
-                upper = max(lower + 1, round(pt["upper_bound"] * volume_scale))
+                pred = max(1, round(pt["predicted_demand"] * eff_scale))
+                lower = max(0, round(pt["lower_bound"] * eff_scale))
+                upper = max(lower + 1, round(pt["upper_bound"] * eff_scale))
                 hist = max(1, round(pred * 0.95))
                 points.append({
                     "date": pt["weekday"],
@@ -76,15 +82,27 @@ class ForecastInferenceEngine:
                     "promo_uplift": round(pred * 0.08)
                 })
 
+            # Exact integer reconciliation if target_volume is specified
+            if target_volume is not None and points:
+                diff = target_volume - sum(p["predicted_demand"] for p in points)
+                if diff != 0:
+                    peak_idx = max(range(len(points)), key=lambda i: points[i]["predicted_demand"])
+                    points[peak_idx]["predicted_demand"] = max(1, points[peak_idx]["predicted_demand"] + diff)
+                    points[peak_idx]["projected_revenue"] = round(points[peak_idx]["predicted_demand"] * unit_price, 2)
+                    points[peak_idx]["upper_bound"] = max(points[peak_idx]["lower_bound"] + 1, points[peak_idx]["predicted_demand"] + max(1, round(points[peak_idx]["predicted_demand"] * 0.15)))
+
         elif time_range == "30d":
             # 4 weekly intervals (28 days)
             raw_points = model.predict(horizon_days=28, start_date=start_date)
+            raw_sum = sum(p["predicted_demand"] for p in raw_points)
+            eff_scale = (target_volume / raw_sum) if (target_volume is not None and raw_sum > 0) else volume_scale
+
             points = []
             for w in range(4):
                 week_slice = raw_points[w * 7 : (w + 1) * 7]
-                w_pred = max(1, round(sum(p["predicted_demand"] for p in week_slice) * volume_scale))
-                w_lower = max(0, round(sum(p["lower_bound"] for p in week_slice) * volume_scale))
-                w_upper = max(w_lower + 1, round(sum(p["upper_bound"] for p in week_slice) * volume_scale))
+                w_pred = max(1, round(sum(p["predicted_demand"] for p in week_slice) * eff_scale))
+                w_lower = max(0, round(sum(p["lower_bound"] for p in week_slice) * eff_scale))
+                w_upper = max(w_lower + 1, round(sum(p["upper_bound"] for p in week_slice) * eff_scale))
                 w_hist = max(1, round(w_pred * 0.94))
                 points.append({
                     "date": f"Week {w + 1}",
@@ -97,14 +115,26 @@ class ForecastInferenceEngine:
                     "promo_uplift": round(w_pred * 0.08)
                 })
 
+            # Exact integer reconciliation if target_volume is specified
+            if target_volume is not None and points:
+                diff = target_volume - sum(p["predicted_demand"] for p in points)
+                if diff != 0:
+                    peak_idx = max(range(len(points)), key=lambda i: points[i]["predicted_demand"])
+                    points[peak_idx]["predicted_demand"] = max(1, points[peak_idx]["predicted_demand"] + diff)
+                    points[peak_idx]["projected_revenue"] = round(points[peak_idx]["predicted_demand"] * unit_price, 2)
+                    points[peak_idx]["upper_bound"] = max(points[peak_idx]["lower_bound"] + 1, points[peak_idx]["predicted_demand"] + max(1, round(points[peak_idx]["predicted_demand"] * 0.15)))
+
         else:  # 90d (3 monthly intervals)
             raw_points = model.predict(horizon_days=90, start_date=start_date)
+            raw_sum = sum(p["predicted_demand"] for p in raw_points)
+            eff_scale = (target_volume / raw_sum) if (target_volume is not None and raw_sum > 0) else volume_scale
+
             points = []
             for m in range(3):
                 month_slice = raw_points[m * 30 : (m + 1) * 30]
-                m_pred = max(1, round(sum(p["predicted_demand"] for p in month_slice) * volume_scale))
-                m_lower = max(0, round(sum(p["lower_bound"] for p in month_slice) * volume_scale))
-                m_upper = max(m_lower + 1, round(sum(p["upper_bound"] for p in month_slice) * volume_scale))
+                m_pred = max(1, round(sum(p["predicted_demand"] for p in month_slice) * eff_scale))
+                m_lower = max(0, round(sum(p["lower_bound"] for p in month_slice) * eff_scale))
+                m_upper = max(m_lower + 1, round(sum(p["upper_bound"] for p in month_slice) * eff_scale))
                 m_hist = max(1, round(m_pred * 0.93))
                 points.append({
                     "date": f"Month {m + 1}",
@@ -116,6 +146,15 @@ class ForecastInferenceEngine:
                     "projected_revenue": round(m_pred * unit_price, 2),
                     "promo_uplift": round(m_pred * 0.09)
                 })
+
+            # Exact integer reconciliation if target_volume is specified
+            if target_volume is not None and points:
+                diff = target_volume - sum(p["predicted_demand"] for p in points)
+                if diff != 0:
+                    peak_idx = max(range(len(points)), key=lambda i: points[i]["predicted_demand"])
+                    points[peak_idx]["predicted_demand"] = max(1, points[peak_idx]["predicted_demand"] + diff)
+                    points[peak_idx]["projected_revenue"] = round(points[peak_idx]["predicted_demand"] * unit_price, 2)
+                    points[peak_idx]["upper_bound"] = max(points[peak_idx]["lower_bound"] + 1, points[peak_idx]["predicted_demand"] + max(1, round(points[peak_idx]["predicted_demand"] * 0.15)))
 
         return {
             "model_name": model.model_name,

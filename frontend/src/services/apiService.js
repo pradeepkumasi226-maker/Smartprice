@@ -75,8 +75,12 @@ export const apiService = {
   // ----------------------------------------------------
   // Products Catalog
   // ----------------------------------------------------
-  async getProducts() {
-    const resp = await fetch('/api/products');
+  async getProducts(options = {}) {
+    let url = '/api/products';
+    if (options && options.min_margin_pct !== undefined) {
+      url += `?min_margin_pct=${encodeURIComponent(options.min_margin_pct)}`;
+    }
+    const resp = await fetch(url);
     if (resp.ok) {
       const data = await resp.json();
       if (Array.isArray(data) && data.length > 0) {
@@ -86,8 +90,12 @@ export const apiService = {
     throw new Error(`Failed to fetch products from backend: HTTP ${resp.status}`);
   },
 
-  async getProductById(id) {
-    const resp = await fetch(`/api/products/${encodeURIComponent(id)}`);
+  async getProductById(id, options = {}) {
+    let url = `/api/products/${encodeURIComponent(id)}`;
+    if (options && options.min_margin_pct !== undefined) {
+      url += `?min_margin_pct=${encodeURIComponent(options.min_margin_pct)}`;
+    }
+    const resp = await fetch(url);
     if (resp.ok) {
       const data = await resp.json();
       return normalizeProduct(data);
@@ -220,12 +228,15 @@ export const apiService = {
   // ----------------------------------------------------
   // Demand Forecast
   // ----------------------------------------------------
-  async getDemandForecast(timeRange = '7d', sku = null) {
+  // Demand Forecasting & Timeline
+  // ----------------------------------------------------
+  async getDemandForecast(timeRange = '7d', sku = null, category = null) {
     await delay(50);
     try {
       const params = new URLSearchParams();
       if (timeRange) params.append('time_range', timeRange);
       if (sku && sku !== 'All') params.append('sku', sku);
+      if (category && category !== 'All') params.append('category', category);
       const queryString = params.toString() ? `?${params.toString()}` : '';
       const resp = await fetch(`/api/forecast${queryString}`);
       if (resp.ok) {
@@ -276,10 +287,14 @@ export const apiService = {
     };
   },
 
-  async getProductForecasts(timeRange = '7d') {
+  async getProductForecasts(timeRange = '7d', category = null) {
     await delay(50);
     try {
-      const resp = await fetch(`/api/forecast/products?time_range=${timeRange}`);
+      const params = new URLSearchParams();
+      if (timeRange) params.append('time_range', timeRange);
+      if (category && category !== 'All') params.append('category', category);
+      const queryString = params.toString() ? `?${params.toString()}` : '';
+      const resp = await fetch(`/api/forecast/products${queryString}`);
       if (resp.ok) {
         const data = await resp.json();
         if (Array.isArray(data) && data.length > 0) {
@@ -397,7 +412,10 @@ export const apiService = {
       else if (stock > reorder * 2.5) shift = -0.04;
       else if (comp > p) shift = Math.min(0.08, (comp - p) / p * 0.7);
 
-      const recP = Number(Math.max(c * 1.05, p * (1 + shift)).toFixed(2));
+      const marginPct = options.min_margin_pct !== undefined ? Number(options.min_margin_pct) : 25;
+      const marginFraction = Math.min(Math.max(marginPct / 100, 0), 0.95);
+      const floorP = Number((c / (1 - marginFraction)).toFixed(2));
+      const recP = Number(Math.max(floorP, p * (1 + shift)).toFixed(2));
       const deltaVal = Number((recP - p).toFixed(2));
       const pctVal = Number(((deltaVal / p) * 100).toFixed(1));
 
@@ -410,6 +428,9 @@ export const apiService = {
         currentPrice: p,
         recommendedPrice: recP,
         costPrice: c,
+        costFloor: c,
+        minGuardrail: floorP,
+        min_guardrail: floorP,
         competitorPrice: comp,
         priceDelta: deltaVal > 0 ? `+₹${deltaVal.toFixed(2)}` : deltaVal < 0 ? `-₹${Math.abs(deltaVal).toFixed(2)}` : '₹0.00',
         priceDeltaVal: deltaVal,

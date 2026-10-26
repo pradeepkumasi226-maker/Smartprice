@@ -98,7 +98,7 @@ class ExplainabilityEngine:
                 "feature": "Cost Floor & Margin Guardrails",
                 "importance": 0.12,
                 "category": "Margin Protection",
-                "description": "Minimum cost markup floor preventing below-cost margin loss.",
+                "description": "Minimum gross-margin floor preventing below-cost or sub-margin margin loss.",
                 "calculation_method": "empirical_decision_weight"
             },
             {

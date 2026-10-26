@@ -153,20 +153,64 @@ export const calculateCategoryPerformance = (salesList = [], productsList = []) 
     categoryMap[cat].units += Number(s.quantity) || 0;
   }
 
+  // Category name normalization map to ensure accurate product count matching
+  const categoryAliasMap = {
+    'Home & Kitchen': ['Home & Kitchen', 'Home Goods'],
+    'Home Goods': ['Home Goods', 'Home & Kitchen'],
+    'Health & Beauty': ['Health & Beauty', 'Beauty & Care'],
+    'Beauty & Care': ['Beauty & Care', 'Health & Beauty']
+  };
+
   return Object.keys(categoryMap).map(catName => {
     const data = categoryMap[catName];
-    const margin = data.revenue > 0 ? (((data.revenue - data.cost) / data.revenue) * 100).toFixed(1) : '0.0';
-    const itemsCount = productsList.filter(p => p.category === catName).length;
+    const profit = data.profit;
+    const margin = data.revenue > 0 ? ((profit / data.revenue) * 100).toFixed(1) : '0.0';
+    const aliases = categoryAliasMap[catName] || [catName];
+    const itemsCount = productsList.filter(p => aliases.includes(p.category)).length;
+
     return {
       category: catName,
       revenue: Math.round(data.revenue),
-      profit: Math.round(data.profit),
+      cost: Math.round(data.cost),
+      profit: Math.round(profit),
+      rawRevenue: data.revenue,
+      rawCost: data.cost,
+      rawProfit: profit,
       units: data.units,
       margin: `${margin}%`,
       items: itemsCount || 1,
       lift: "+14.2%"
     };
   });
+};
+
+/**
+ * Verifies mathematical parity between headline metrics and category-level figures.
+ */
+export const reconcileFinancialMetrics = (headlineMetrics = {}, categoryBreakdown = []) => {
+  const sumCategoryRevenue = categoryBreakdown.reduce((acc, c) => acc + (c.rawRevenue !== undefined ? c.rawRevenue : (Number(c.revenue) || 0)), 0);
+  const sumCategoryProfit = categoryBreakdown.reduce((acc, c) => acc + (c.rawProfit !== undefined ? c.rawProfit : (Number(c.profit) || 0)), 0);
+  const sumCategoryCost = categoryBreakdown.reduce((acc, c) => acc + (c.rawCost !== undefined ? c.rawCost : (Number(c.cost) || 0)), 0);
+  const sumCategoryUnits = categoryBreakdown.reduce((acc, c) => acc + (Number(c.units) || 0), 0);
+
+  const headlineRevenue = Number(headlineMetrics.totalRevenue || 0);
+  const headlineProfit = Number(headlineMetrics.totalProfit || 0);
+  const headlineCost = Number(headlineMetrics.totalCost || 0);
+
+  const revenueDiff = Math.abs(headlineRevenue - sumCategoryRevenue);
+  const profitDiff = Math.abs(headlineProfit - sumCategoryProfit);
+
+  return {
+    sumCategoryRevenue: Math.round(sumCategoryRevenue),
+    sumCategoryProfit: Math.round(sumCategoryProfit),
+    sumCategoryCost: Math.round(sumCategoryCost),
+    sumCategoryUnits,
+    revenueDiff: Number(revenueDiff.toFixed(2)),
+    profitDiff: Number(profitDiff.toFixed(2)),
+    unallocatedCost: 0.0,
+    isReconciled: revenueDiff < 1.0 && profitDiff < 1.0,
+    statusText: revenueDiff < 1.0 && profitDiff < 1.0 ? '100% Reconciled' : 'Discrepancy Detected'
+  };
 };
 
 /**

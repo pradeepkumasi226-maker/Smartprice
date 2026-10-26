@@ -44,6 +44,24 @@ class PricingRuleAttributionExplainer(BaseExplainer):
         name = str(getattr(product, "name", "Product"))
         prod_id = str(getattr(product, "id", "N/A"))
 
+        # Determine gross margin floor using corrected gross-margin formula:
+        # floor_price = cost_price / (1 - margin_fraction)
+        raw_margin = context.get("min_margin_pct")
+        if raw_margin is not None:
+            try:
+                min_margin_pct = float(raw_margin)
+            except (TypeError, ValueError):
+                min_margin_pct = 5.0
+        else:
+            min_margin_pct = 5.0
+
+        margin_fraction = (min_margin_pct or 0.0) / 100.0
+        if 0.0 <= margin_fraction < 1.0 and cost_p > 0:
+            margin_floor = round(cost_p / (1.0 - margin_fraction), 2)
+        else:
+            margin_floor = cost_p
+        cost_floor = max(cost_p, margin_floor)
+
         # Determine target recommended price from context or deterministic engine logic
         rec_p = context.get("recommended_price")
         if rec_p is None:
@@ -66,8 +84,7 @@ class PricingRuleAttributionExplainer(BaseExplainer):
                 shift -= 0.02
 
             raw_target = round(current_p * (1.0 + shift), 2)
-            # Apply cost floor guardrail (cost + 5% min margin)
-            cost_floor = round(cost_p * 1.05, 2)
+            # Apply cost floor guardrail
             rec_p = max(cost_floor, raw_target)
         else:
             rec_p = round(float(rec_p), 2)
@@ -176,28 +193,54 @@ class PricingRuleAttributionExplainer(BaseExplainer):
         else:
             rating_contrib = 0.0
 
-        # 6. Additive Calibration / Guardrail Adjustment
+        # 6. Additive Calibration / Guardrail Adjustment / Override Attribution
         # Exact mathematical reconciliation: sum of deltas must equal total_delta
         current_sum_deltas = sum(c.value for c in contributions[1:])
         reconciliation_delta = round(total_delta - current_sum_deltas, 2)
 
+        is_override = bool(
+            context.get("is_historical_override")
+            or context.get("is_override")
+            or rec_p < cost_p
+            or context.get("override_decision") == "OVERRIDDEN_BELOW_COST"
+        )
+
         if abs(reconciliation_delta) >= 0.01:
-            is_cost_floor = rec_p <= (cost_p * 1.05 + 0.05) and total_delta < 0
-            calib_name = "Cost Floor Guardrail Enforcement" if is_cost_floor else "Engine Guardrail & Rounding Calibration"
-            calib_desc = (
-                f"Minimum margin guardrail enforced: prevents recommendation from falling below cost floor (₹{cost_p * 1.05:.2f})."
-                if is_cost_floor else
-                f"Multi-constraint bounding to enforce bounds and exact retail step increments."
-            )
+            if is_override:
+                override_user = context.get("override_user") or "Executive"
+                override_reason_text = context.get("override_reason") or "Strategic clearance / promotional override"
+                calib_name = "Executive Below-Cost Override Authorization"
+                calib_desc = (
+                    f"Explicit executive override authorized below wholesale cost floor (target ₹{rec_p:.2f} < cost floor ₹{cost_p:.2f}). "
+                    f"Authorized by {override_user}. Reason: {override_reason_text}"
+                )
+                raw_feat = "executive_override"
+                causal_st = CausalStatus.DETERMINISTIC_RULE_WEIGHT.value
+            else:
+                # Check if recommendation was clamped to gross-margin floor
+                is_cost_floor = (rec_p <= (cost_floor + 0.05)) and (total_delta < 0 or current_sum_deltas < 0)
+                if is_cost_floor:
+                    calib_name = "Cost Floor Guardrail Enforcement"
+                    calib_desc = (
+                        f"Minimum gross-margin guardrail ({min_margin_pct:.0f}%) enforced: prevents recommendation from falling below "
+                        f"gross-margin floor of ₹{cost_floor:.2f} (unit cost: ₹{cost_p:.2f})."
+                    )
+                    raw_feat = "margin_guardrail"
+                else:
+                    calib_name = "Engine Guardrail & Rounding Calibration"
+                    calib_desc = "Multi-constraint bounding to enforce bounds and exact retail step increments."
+                    raw_feat = "guardrail_calibration"
+                causal_st = CausalStatus.DETERMINISTIC_RULE_WEIGHT.value
+
             contributions.append(FeatureContribution(
                 name=calib_name,
                 value=reconciliation_delta,
                 formatted_value=f"{'+' if reconciliation_delta >= 0 else ''}₹{reconciliation_delta:.2f}",
                 type="increase" if reconciliation_delta >= 0 else "decrease",
-                raw_feature="guardrail_calibration",
+                raw_feature=raw_feat,
                 feature_value=f"₹{reconciliation_delta:.2f}",
                 description=calib_desc,
-                causal_status=CausalStatus.DETERMINISTIC_RULE_WEIGHT.value
+                causal_status=causal_st
             ))
 
         # 7. Final Recommended Price Output
@@ -215,18 +258,26 @@ class PricingRuleAttributionExplainer(BaseExplainer):
         # Build natural language explanation
         direction = "raised" if total_delta > 0 else "reduced" if total_delta < 0 else "maintained"
         delta_str = f"+₹{total_delta:.2f}" if total_delta > 0 else f"-₹{abs(total_delta):.2f}" if total_delta < 0 else "₹0.00"
-        
+
         reasons_summary: List[str] = []
         for c in contributions[1:-1]:
             if abs(c.value) >= 0.5:
                 reasons_summary.append(f"{c.name} ({c.formatted_value})")
 
         drivers_text = ", ".join(reasons_summary) if reasons_summary else "current margin target alignment"
-        natural_explanation = (
-            f"The pricing optimization engine {direction} the price from ₹{current_p:.2f} to ₹{rec_p:.2f} "
-            f"({delta_str}) for {name} (SKU: {sku}). Primary contributing drivers: {drivers_text}. "
-            f"Rule-based deterministic attribution. Unobserved external factors may also influence real customer behavior."
-        )
+
+        if is_override:
+            natural_explanation = (
+                f"The pricing optimization engine reflects an authorized executive below-cost override reducing the price from "
+                f"₹{current_p:.2f} to ₹{rec_p:.2f} ({delta_str}) for {name} (SKU: {sku}). Primary contributing driver: {drivers_text}. "
+                f"Historical executive override; does not reflect ordinary guardrail-enforced recommendations."
+            )
+        else:
+            natural_explanation = (
+                f"The pricing optimization engine {direction} the price from ₹{current_p:.2f} to ₹{rec_p:.2f} "
+                f"({delta_str}) for {name} (SKU: {sku}). Primary contributing drivers: {drivers_text}. "
+                f"Rule-based deterministic attribution. Unobserved external factors may also influence real customer behavior."
+            )
 
         waterfall_points = [c.to_dict() for c in contributions]
         frontend_features = [c.to_frontend_feature() for c in contributions[:-1]]
@@ -282,7 +333,7 @@ class PricingRuleAttributionExplainer(BaseExplainer):
             "Price Elasticity Responsiveness": "Attribution from log-log demand elasticity and price sensitivity.",
             "Inventory Stock Scarcity / Buffer": "Attribution from on-hand stock depth vs. reorder and safety thresholds.",
             "Customer Review Rating & Sentiment": "Attribution from customer feedback rating index.",
-            "Cost Floor & Margin Guardrails": "Attribution from minimum margin floor clamp constraints."
+            "Cost Floor & Margin Guardrails": "Attribution from minimum gross-margin floor and guardrail clamp constraints."
         }
 
         for p in catalog:
@@ -298,7 +349,7 @@ class PricingRuleAttributionExplainer(BaseExplainer):
                     feature_totals["Inventory Stock Scarcity / Buffer"] += val
                 elif "Review" in name or "Rating" in name:
                     feature_totals["Customer Review Rating & Sentiment"] += val
-                elif "Guardrail" in name or "Floor" in name:
+                elif "Guardrail" in name or "Floor" in name or "Override" in name:
                     feature_totals["Cost Floor & Margin Guardrails"] += val
 
         total_sum = sum(feature_totals.values())

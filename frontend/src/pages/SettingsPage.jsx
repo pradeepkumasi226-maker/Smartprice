@@ -60,12 +60,12 @@ const DEFAULTS = {
 };
 
 export const SettingsPage = () => {
-  const { addToast, currency, setCurrency } = useStore();
+  const { addToast, currency, setCurrency, settings: storeSettings, updateSettings } = useStore();
   const { theme, setTheme } = useTheme();
   const [activeTab, setActiveTab] = useState('guardrails');
 
   // Load persisted settings once on mount; fall back to DEFAULTS for each key
-  const [saved] = useState(() => loadSettings() ?? {});
+  const [saved] = useState(() => storeSettings ?? loadSettings() ?? {});
 
   // ── Guardrails ──────────────────────────────────────────────────────────────
   const [minMargin, setMinMargin] = useState(
@@ -150,9 +150,12 @@ export const SettingsPage = () => {
 
     try {
       persistSettings(snapshot);
+      if (updateSettings) {
+        updateSettings(snapshot);
+      }
       addToast(
         'Settings Saved',
-        `Your ${section} configurations have been saved and will persist across sessions.`,
+        `Your ${section} configurations have been saved and applied to the pricing engine.`,
         'success'
       );
     } catch {

@@ -27,9 +27,11 @@ export const DemandForecastPage = () => {
   const [selectedProductId, setSelectedProductId] = useState(pageParams?.productId || 'All');
   const [seasonalityDrivers, setSeasonalityDrivers] = useState([]);
   const [forecastPoints, setForecastPoints] = useState([]);
+  const [productForecasts, setProductForecasts] = useState([]);
   const [forecastMeta, setForecastMeta] = useState({
     model_name: "SmartPrice Baseline Demand Forecaster",
-    accuracy_metric: "Validation WAPE: 48.1%, MAE: 31.3 units"
+    accuracy_metric: "Validation WAPE: 48.1%, MAE: 31.3 units",
+    projected_change_pct: null
   });
   const [loading, setLoading] = useState(false);
   const [forecastLoading, setForecastLoading] = useState(false);
@@ -86,15 +88,27 @@ export const DemandForecastPage = () => {
         setForecastLoading(true);
         setForecastError(null);
         const skuParam = selectedProductId !== 'All' ? (selectedProduct?.sku || selectedProductId) : null;
-        const res = await apiService.getDemandForecast(timeRange, skuParam);
-        if (!isCancelled && res) {
-          const rawPoints = Array.isArray(res) ? res : (res.points || []);
-          setForecastPoints(rawPoints);
-          if (res.model_name || res.accuracy_metric) {
-            setForecastMeta({
-              model_name: res.model_name || "SmartPrice Baseline Demand Forecaster",
-              accuracy_metric: res.accuracy_metric || "Validation WAPE: 48.1%, MAE: 31.3 units"
-            });
+        const catParam = selectedCategory !== 'All' ? selectedCategory : null;
+
+        const [res, pSummaries] = await Promise.all([
+          apiService.getDemandForecast(timeRange, skuParam, catParam),
+          apiService.getProductForecasts(timeRange, catParam)
+        ]);
+
+        if (!isCancelled) {
+          if (res) {
+            const rawPoints = Array.isArray(res) ? res : (res.points || []);
+            setForecastPoints(rawPoints);
+            if (res.model_name || res.accuracy_metric || res.projected_change_pct !== undefined) {
+              setForecastMeta({
+                model_name: res.model_name || "SmartPrice Baseline Demand Forecaster",
+                accuracy_metric: res.accuracy_metric || "Validation WAPE: 48.1%, MAE: 31.3 units",
+                projected_change_pct: res.projected_change_pct
+              });
+            }
+          }
+          if (Array.isArray(pSummaries)) {
+            setProductForecasts(pSummaries);
           }
         }
       } catch (err) {
@@ -112,7 +126,29 @@ export const DemandForecastPage = () => {
     return () => {
       isCancelled = true;
     };
-  }, [timeRange, selectedProductId, selectedProduct]);
+  }, [timeRange, selectedProductId, selectedProduct, selectedCategory]);
+
+  const productForecastMap = useMemo(() => {
+    const map = {};
+    if (Array.isArray(productForecasts)) {
+      productForecasts.forEach(pf => {
+        if (pf.product_id) map[pf.product_id] = pf;
+        if (pf.sku) map[pf.sku] = pf;
+      });
+    }
+    return map;
+  }, [productForecasts]);
+
+  const horizonMultiplier = useMemo(() => {
+    return timeRange === '7d' ? 1.0 : timeRange === '30d' ? 4.2 : 12.5;
+  }, [timeRange]);
+
+  const tableTotalUnits = useMemo(() => {
+    return filteredProducts.reduce((acc, p) => {
+      const u = productForecastMap[p.id]?.predicted_demand_units ?? Math.round((p.predictedDemand || 100) * horizonMultiplier);
+      return acc + u;
+    }, 0);
+  }, [filteredProducts, productForecastMap, horizonMultiplier]);
 
   const forecastData = useMemo(() => {
     if (!forecastPoints || forecastPoints.length === 0) return [];
@@ -123,7 +159,9 @@ export const DemandForecastPage = () => {
       const upperP90 = Number(item.upper_bound ?? item.upperP90 ?? 0);
       const promoUplift = item.promoUplift !== undefined
         ? Number(item.promoUplift)
-        : (forecastP50 && lowerP10 ? Math.max(0, Math.round((forecastP50 - lowerP10) * 0.4)) : 0);
+        : (item.promo_uplift !== undefined
+          ? Number(item.promo_uplift)
+          : (forecastP50 && lowerP10 ? Math.max(0, Math.round((forecastP50 - lowerP10) * 0.4)) : 0));
 
       return {
         ...item,
@@ -147,12 +185,24 @@ export const DemandForecastPage = () => {
       const sum = forecastData.reduce((acc, pt) => acc + (pt.forecastP50 || pt.predicted_demand || 0), 0);
       if (sum > 0) return sum;
     }
-    const multiplier = timeRange === '7d' ? 1 : timeRange === '30d' ? 4.2 : 12.5;
-    const baseSum = selectedProduct
-      ? (selectedProduct.predictedDemand || 100)
-      : filteredProducts.reduce((acc, p) => acc + (p.predictedDemand || 100), 0);
-    return Math.round(baseSum * multiplier);
-  }, [forecastData, filteredProducts, selectedProduct, timeRange]);
+    return tableTotalUnits;
+  }, [forecastData, tableTotalUnits]);
+
+  const projectedGrowth = useMemo(() => {
+    if (forecastMeta.projected_change_pct !== undefined && forecastMeta.projected_change_pct !== null) {
+      const pct = forecastMeta.projected_change_pct;
+      return `${pct >= 0 ? '+' : ''}${pct}%`;
+    }
+    return '+11.4%';
+  }, [forecastMeta]);
+
+  const promoUpliftUnits = useMemo(() => {
+    if (forecastData.length > 0) {
+      const sum = forecastData.reduce((acc, pt) => acc + (pt.promoUplift || 0), 0);
+      if (sum > 0) return sum;
+    }
+    return Math.round(totalForecastVolume * 0.11);
+  }, [forecastData, totalForecastVolume]);
 
   if (products.length === 0) {
     return (
@@ -247,7 +297,7 @@ export const DemandForecastPage = () => {
           value={`${totalForecastVolume.toLocaleString()} units`}
           subvalue={`Projected for ${timeRange.toUpperCase()}`}
           trend="up"
-          trendValue="+11.4%"
+          trendValue={projectedGrowth}
           icon={TrendingUp}
           iconColor="#10B981"
           iconBg="rgba(16, 185, 129, 0.12)"
@@ -264,7 +314,7 @@ export const DemandForecastPage = () => {
         />
         <MetricCard
           title="Promotional Uplift"
-          value={`+${Math.round(totalForecastVolume * 0.11)} units`}
+          value={`+${promoUpliftUnits.toLocaleString()} units`}
           subvalue="Weekend & flash event lift"
           trend="up"
           trendValue="+18.5%"
@@ -396,37 +446,56 @@ export const DemandForecastPage = () => {
               <thead>
                 <tr>
                   <th>Product</th>
-                  <th>Expected Demand</th>
+                  <th>Expected Demand ({timeRange.toUpperCase()})</th>
                   <th>Velocity</th>
                   <th>Action</th>
                 </tr>
               </thead>
               <tbody>
-                {filteredProducts.map((p) => (
-                  <tr key={p.id}>
-                    <td>
-                      <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{p.name}</div>
-                      <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.sku}</div>
+                {filteredProducts.map((p) => {
+                  const expectedUnits = productForecastMap[p.id]?.predicted_demand_units ?? Math.round((p.predictedDemand || 100) * horizonMultiplier);
+                  const velocity = productForecastMap[p.id]?.sales_velocity ?? p.salesVelocity ?? 'Moderate';
+                  return (
+                    <tr key={p.id}>
+                      <td>
+                        <div style={{ fontWeight: 600, fontSize: '0.82rem' }}>{p.name}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>{p.sku}</div>
+                      </td>
+                      <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
+                        {expectedUnits.toLocaleString()} units
+                      </td>
+                      <td>
+                        <Badge variant="purple">{velocity}</Badge>
+                      </td>
+                      <td>
+                        <button
+                          className="btn btn-outline btn-sm"
+                          onClick={() => navigateTo('what-if', { productId: p.id })}
+                          title="Simulate pricing for this SKU"
+                        >
+                          <Sliders size={13} />
+                          <span>Simulate</span>
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+              {filteredProducts.length > 0 && (
+                <tfoot>
+                  <tr style={{ borderTop: '2px solid var(--border-default)', fontWeight: 700, background: 'rgba(255,255,255,0.03)' }}>
+                    <td style={{ fontSize: '0.84rem' }}>
+                      Total ({filteredProducts.length} {filteredProducts.length === 1 ? 'item' : 'items'})
                     </td>
-                    <td style={{ fontWeight: 700, fontFamily: 'var(--font-mono)' }}>
-                      {p.predictedDemand || 100} units
+                    <td style={{ fontFamily: 'var(--font-mono)', color: 'var(--primary)', fontSize: '0.92rem' }}>
+                      {tableTotalUnits.toLocaleString()} units
                     </td>
-                    <td>
-                      <Badge variant="purple">{p.salesVelocity || 'Moderate'}</Badge>
-                    </td>
-                    <td>
-                      <button
-                        className="btn btn-outline btn-sm"
-                        onClick={() => navigateTo('what-if', { productId: p.id })}
-                        title="Simulate pricing for this SKU"
-                      >
-                        <Sliders size={13} />
-                        <span>Simulate</span>
-                      </button>
+                    <td colSpan={2} style={{ fontSize: '0.76rem', color: 'var(--text-muted)' }}>
+                      Reconciled with {timeRange.toUpperCase()} Forecast
                     </td>
                   </tr>
-                ))}
-              </tbody>
+                </tfoot>
+              )}
             </table>
           </div>
         </div>

@@ -92,6 +92,14 @@ export const normalizeProduct = (p) => {
     dynamic_pricing: p.dynamic_pricing !== undefined
       ? Boolean(p.dynamic_pricing)
       : (p.dynamicPricing !== undefined ? Boolean(p.dynamicPricing) : true),
+    has_active_recommendation: Boolean(p.has_active_recommendation),
+    hasActiveRecommendation: Boolean(p.has_active_recommendation || p.hasActiveRecommendation),
+    has_historical_override: Boolean(p.has_historical_override),
+    hasHistoricalOverride: Boolean(p.has_historical_override || p.hasHistoricalOverride),
+    historical_override_price: p.historical_override_price !== undefined ? p.historical_override_price : (p.historicalOverridePrice ?? null),
+    historicalOverridePrice: p.historical_override_price !== undefined ? p.historical_override_price : (p.historicalOverridePrice ?? null),
+    override_reason: p.override_reason || p.overrideReason || null,
+    overrideReason: p.override_reason || p.overrideReason || null,
     expectedRevenue: p.expectedRevenue ?? Math.round(current_price * predicted_demand),
     aiConfidence: p.aiConfidence || '92%',
     salesVelocity: p.salesVelocity || (stock_quantity > 50 ? 'High' : 'Moderate'),
