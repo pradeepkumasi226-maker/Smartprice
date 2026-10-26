@@ -1,0 +1,101 @@
+/* ==========================================================================
+   SmartPrice Charts & Data Visualization Styles
+   Recharts styling, custom glass tooltips, interactive indicators
+   ========================================================================== */
+
+.chart-wrapper {
+  width: 100%;
+  position: relative;
+}
+
+.custom-chart-tooltip {
+  background: var(--tooltip-bg);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  padding: 0.75rem 1rem;
+  box-shadow: var(--shadow-xl);
+  pointer-events: none;
+}
+
+.tooltip-title {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.4rem;
+  padding-bottom: 0.3rem;
+  border-bottom: 1px solid var(--border-subtle);
+}
+
+.tooltip-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.25rem;
+  font-size: 0.82rem;
+  margin: 0.25rem 0;
+}
+
+.tooltip-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  display: inline-block;
+  margin-right: 0.4rem;
+}
+
+.tooltip-label {
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+}
+
+.tooltip-val {
+  font-weight: 700;
+  color: var(--text-primary);
+  font-feature-settings: "tnum";
+}
+
+/* SHAP Waterfall chart styling */
+.shap-waterfall-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  padding: 1.5rem;
+}
+
+.shap-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  margin-bottom: 1.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.shap-legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.shap-color-pill {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+}
+
+.shap-color-positive {
+  background: #10B981;
+}
+
+.shap-color-negative {
+  background: #EF4444;
+}
+
+.shap-color-base {
+  background: #6366F1;
+}

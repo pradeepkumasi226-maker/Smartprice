@@ -1,0 +1,43 @@
+{
+  "model_name": "SmartPrice Baseline Demand Forecaster",
+  "model_version": "v1.0.0-baseline",
+  "trained_at": "2026-10-19T13:38:09.783329+00:00",
+  "dataset_summary": {
+    "total_records": 160,
+    "distinct_dates": 16,
+    "date_range": [
+      "2026-01-15",
+      "2026-08-18"
+    ],
+    "is_sufficient_for_ml": false,
+    "sample_data_disclaimer": "Trained on sample/seed retail transactions. Genuine multi-month continuous historical sales data is required for production accuracy certification."
+  },
+  "split": {
+    "type": "chronological",
+    "cutoff_date": "2026-07-04",
+    "train_samples": 12,
+    "val_samples": 4
+  },
+  "evaluation_metrics": {
+    "validation_metrics": {
+      "mae": 31.26,
+      "rmse": 33.317,
+      "wape_pct": 48.09,
+      "mape_pct": 67.09,
+      "bias_pct": -24.34,
+      "sample_size": 4
+    },
+    "in_sample_metrics": {
+      "mae": 12.226,
+      "rmse": 16.863,
+      "wape_pct": 22.79,
+      "mape_pct": 37.36,
+      "bias_pct": -0.82,
+      "sample_size": 11
+    }
+  },
+  "hyperparameters": {
+    "alpha": 0.35,
+    "prediction_interval": 0.8
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "model_name": "SmartPrice Baseline Demand Forecaster",
+  "model_version": "v1.0.0-baseline",
+  "alpha": 0.35,
+  "prediction_interval": 0.8,
+  "last_level": 50.8734,
+  "weekday_indices": {
+    "0": 1.0333,
+    "1": 1.0,
+    "2": 0.8,
+    "3": 0.9,
+    "4": 1.0333,
+    "5": 1.0333,
+    "6": 1.2
+  },
+  "residual_std": 16.8633,
+  "last_date": "2026-06-18",
+  "training_series_count": 12,
+  "in_sample_metrics": {
+    "mae": 12.226,
+    "rmse": 16.863,
+    "wape_pct": 22.79,
+    "mape_pct": 37.36,
+    "bias_pct": -0.82,
+    "sample_size": 11
+  },
+  "saved_at": "2026-10-19T13:38:09.781702"
+}

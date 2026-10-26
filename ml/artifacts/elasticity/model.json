@@ -1,0 +1,457 @@
+{
+  "model_name": "SmartPrice Log-Log Price Elasticity Estimator",
+  "model_version": "v1.0.0-elasticity",
+  "saved_at": "2026-10-19T13:38:01.880496+00:00",
+  "sku_estimates": {
+    "ELC-4921": {
+      "sku": "ELC-4921",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          199.99,
+          199.99
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          199.99
+        ],
+        "price_range": [
+          199.99,
+          199.99
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "ELC-8812": {
+      "sku": "ELC-8812",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          899.0,
+          899.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          899.0
+        ],
+        "price_range": [
+          899.0,
+          899.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "APP-1029": {
+      "sku": "APP-1029",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          89.0,
+          89.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          89.0
+        ],
+        "price_range": [
+          89.0,
+          89.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "APP-3041": {
+      "sku": "APP-3041",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          64.5,
+          64.5
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          64.5
+        ],
+        "price_range": [
+          64.5,
+          64.5
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "HOM-5520": {
+      "sku": "HOM-5520",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          249.0,
+          249.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          249.0
+        ],
+        "price_range": [
+          249.0,
+          249.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "HOM-7193": {
+      "sku": "HOM-7193",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          399.0,
+          399.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          399.0
+        ],
+        "price_range": [
+          399.0,
+          399.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "SPT-2019": {
+      "sku": "SPT-2019",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          145.0,
+          145.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          145.0
+        ],
+        "price_range": [
+          145.0,
+          145.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "SPT-8492": {
+      "sku": "SPT-8492",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          78.0,
+          78.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          78.0
+        ],
+        "price_range": [
+          78.0,
+          78.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "BEA-6601": {
+      "sku": "BEA-6601",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          38.5,
+          38.5
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          38.5
+        ],
+        "price_range": [
+          38.5,
+          38.5
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    },
+    "BEA-9144": {
+      "sku": "BEA-9144",
+      "effective_elasticity": -1.25,
+      "fitted_elasticity": null,
+      "elasticity_source": "fallback_catalog",
+      "reliability_status": "UNRELIABLE_CONSTANT_PRICE",
+      "is_reliable": false,
+      "explanation": "Observed historical sales have zero price variance (constant shelf price). Econometric slope beta1 = Cov(ln P, ln Q) / Var(ln P) is mathematically undefined.",
+      "data_summary": {
+        "is_valid": false,
+        "sample_size": 16,
+        "distinct_prices": 1,
+        "price_range": [
+          52.0,
+          52.0
+        ],
+        "price_cv": 0.0,
+        "warnings": [
+          "Constant or near-constant pricing: only 1 distinct price point(s) observed. Elasticity cannot be econometrically identified without price movement."
+        ]
+      },
+      "regression_diagnostics": {
+        "elasticity": null,
+        "intercept": null,
+        "std_error": null,
+        "r_squared": null,
+        "t_statistic": null,
+        "p_value": null,
+        "conf_interval_95": [
+          0.0,
+          0.0
+        ],
+        "sample_size": 16,
+        "error": "zero_price_variance",
+        "message": "Price variation is zero (all observed prices are constant). Econometric elasticity cannot be identified without price movement.",
+        "distinct_prices": [
+          52.0
+        ],
+        "price_range": [
+          52.0,
+          52.0
+        ]
+      },
+      "observational_limitations": "Caution regarding observational retail data: Estimated regression coefficients reflect historical conditional associations. Observational price changes may be confounded by simultaneous promotional marketing campaigns, stockouts, supply shifts, and seasonal footfall. Coefficients should not be interpreted as pure causal elasticity without exogenous price experiments (A/B testing)."
+    }
+  }
+}

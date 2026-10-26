@@ -1,0 +1,363 @@
+/* ==========================================================================
+   SmartPrice Design System & Global Styles
+   Modern AI-Powered Analytics Theme
+   ========================================================================== */
+
+:root {
+  /* Color Palette - Premium Dark Analytics */
+  --bg-app: #090D16;
+  --bg-card: #0F172A;
+  --bg-card-hover: #162038;
+  --bg-card-subtle: #131D33;
+  --bg-surface: #1E293B;
+  --bg-surface-elevated: #24324B;
+  --bg-glass: rgba(15, 23, 42, 0.75);
+  --bg-glass-card: rgba(22, 32, 56, 0.6);
+  --bg-glass-input: rgba(15, 23, 42, 0.6);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(148, 163, 184, 0.08);
+  --border-default: rgba(148, 163, 184, 0.15);
+  --border-strong: rgba(148, 163, 184, 0.25);
+  --border-glow: rgba(99, 102, 241, 0.4);
+  --border-cyan-glow: rgba(6, 182, 212, 0.4);
+
+  /* Primary Brand & AI Accents */
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-light: rgba(99, 102, 241, 0.15);
+  --primary-gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  --ai-gradient: linear-gradient(135deg, #06B6D4 0%, #3B82F6 50%, #8B5CF6 100%);
+  --brand-gradient-glow: 0 0 20px rgba(99, 102, 241, 0.35);
+
+  /* Semantic Status Colors */
+  --success: #10B981;
+  --success-bg: rgba(16, 185, 129, 0.12);
+  --success-border: rgba(16, 185, 129, 0.3);
+  --success-glow: 0 0 12px rgba(16, 185, 129, 0.35);
+
+  --warning: #F59E0B;
+  --warning-bg: rgba(245, 158, 11, 0.12);
+  --warning-border: rgba(245, 158, 11, 0.3);
+
+  --danger: #EF4444;
+  --danger-bg: rgba(239, 68, 68, 0.12);
+  --danger-border: rgba(239, 68, 68, 0.3);
+
+  --info: #06B6D4;
+  --info-bg: rgba(6, 182, 212, 0.12);
+  --info-border: rgba(6, 182, 212, 0.3);
+
+  --purple: #A855F7;
+  --purple-bg: rgba(168, 85, 247, 0.12);
+
+  /* Typography Colors */
+  --text-primary: #F8FAFC;
+  --text-secondary: #94A3B8;
+  --text-muted: #64748B;
+  --text-disabled: #475569;
+  --text-accent: #38BDF8;
+  --text-ai: #A78BFA;
+
+  /* Typography Settings */
+  --font-main: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+
+  /* Elevation & Shadows */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.4), 0 2px 4px -2px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.5), 0 4px 6px -4px rgba(0, 0, 0, 0.4);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 8px 10px -6px rgba(0, 0, 0, 0.5);
+  --shadow-glow: 0 0 25px -3px rgba(99, 102, 241, 0.25);
+  --shadow-ai: 0 0 30px -5px rgba(6, 182, 212, 0.25);
+
+  /* Layout Measurements */
+  --sidebar-width: 260px;
+  --sidebar-collapsed-width: 76px;
+  --header-height: 70px;
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
+  --radius-full: 9999px;
+
+  /* Transitions */
+  --transition-fast: 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-normal: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Theme-aware semantic tokens (dark defaults) */
+  --table-hover-bg: rgba(255, 255, 255, 0.02);
+  --tooltip-bg: rgba(15, 23, 42, 0.95);
+  --modal-footer-bg: rgba(15, 23, 42, 0.4);
+  --batch-toolbar-bg: rgba(15, 23, 42, 0.92);
+  --sidebar-footer-bg: rgba(15, 23, 42, 0.4);
+  --scrollbar-track: var(--bg-app);
+  --scrollbar-thumb: var(--bg-surface);
+}
+
+/* ==========================================================================
+   Light Theme Override
+   Activated by <html data-theme="light"> set from ThemeContext.jsx
+   Only color / appearance tokens are overridden.
+   Layout, spacing, radii, transitions remain unchanged.
+   ========================================================================== */
+[data-theme="light"] {
+  /* Backgrounds */
+  --bg-app: #F1F5F9;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-card-subtle: #F4F7FB;
+  --bg-surface: #F8FAFC;
+  --bg-surface-elevated: #EEF2F7;
+  --bg-glass: rgba(255, 255, 255, 0.88);
+  --bg-glass-card: rgba(248, 250, 252, 0.92);
+  --bg-glass-input: rgba(248, 250, 252, 0.97);
+
+  /* Borders & Dividers */
+  --border-subtle: rgba(100, 116, 139, 0.12);
+  --border-default: rgba(100, 116, 139, 0.22);
+  --border-strong: rgba(100, 116, 139, 0.38);
+  --border-glow: rgba(99, 102, 241, 0.35);
+  --border-cyan-glow: rgba(6, 182, 212, 0.35);
+
+  /* Primary brand & AI accents — kept identical for visual identity */
+  --primary: #6366F1;
+  --primary-hover: #4F46E5;
+  --primary-light: rgba(99, 102, 241, 0.10);
+  --primary-gradient: linear-gradient(135deg, #6366F1 0%, #8B5CF6 50%, #EC4899 100%);
+  --ai-gradient: linear-gradient(135deg, #06B6D4 0%, #3B82F6 50%, #8B5CF6 100%);
+  --brand-gradient-glow: 0 0 20px rgba(99, 102, 241, 0.20);
+
+  /* Semantic Status Colors — identical, they work on both themes */
+  --success: #059669;
+  --success-bg: rgba(5, 150, 105, 0.10);
+  --success-border: rgba(5, 150, 105, 0.28);
+  --success-glow: 0 0 12px rgba(5, 150, 105, 0.25);
+
+  --warning: #D97706;
+  --warning-bg: rgba(217, 119, 6, 0.10);
+  --warning-border: rgba(217, 119, 6, 0.28);
+
+  --danger: #DC2626;
+  --danger-bg: rgba(220, 38, 38, 0.10);
+  --danger-border: rgba(220, 38, 38, 0.28);
+
+  --info: #0284C7;
+  --info-bg: rgba(2, 132, 199, 0.10);
+  --info-border: rgba(2, 132, 199, 0.28);
+
+  --purple: #7C3AED;
+  --purple-bg: rgba(124, 58, 237, 0.10);
+
+  /* Typography Colors */
+  --text-primary: #0F172A;
+  --text-secondary: #475569;
+  --text-muted: #94A3B8;
+  --text-disabled: #CBD5E1;
+  --text-accent: #6366F1;
+  --text-ai: #7C3AED;
+
+  /* Elevation & Shadows — lighter for white backgrounds */
+  --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.08);
+  --shadow-md: 0 4px 8px -2px rgba(0, 0, 0, 0.10), 0 2px 4px -2px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 20px -4px rgba(0, 0, 0, 0.12), 0 4px 8px -4px rgba(0, 0, 0, 0.08);
+  --shadow-xl: 0 20px 32px -6px rgba(0, 0, 0, 0.14), 0 8px 12px -6px rgba(0, 0, 0, 0.09);
+  --shadow-glow: 0 0 20px -4px rgba(99, 102, 241, 0.18);
+  --shadow-ai: 0 0 25px -6px rgba(6, 182, 212, 0.18);
+
+  /* Theme-aware semantic tokens */
+  --table-hover-bg: rgba(0, 0, 0, 0.025);
+  --tooltip-bg: rgba(15, 23, 42, 0.92);
+  --modal-footer-bg: rgba(241, 245, 249, 0.8);
+  --batch-toolbar-bg: rgba(255, 255, 255, 0.96);
+  --sidebar-footer-bg: rgba(241, 245, 249, 0.6);
+  --scrollbar-track: #E2E8F0;
+  --scrollbar-thumb: #CBD5E1;
+}
+
+
+
+/* Base Resets */
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+/* Smooth theme transition — applied on html so ALL children inherit */
+html {
+  transition:
+    background-color 0.3s cubic-bezier(0.4, 0, 0.2, 1),
+    color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+html, body {
+  height: 100%;
+  width: 100%;
+  background-color: var(--bg-app);
+  color: var(--text-primary);
+  font-family: var(--font-main);
+  font-size: 14px;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  overflow-x: hidden;
+}
+
+#root {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--scrollbar-thumb);
+  border-radius: var(--radius-full);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-disabled);
+}
+
+/* Typography Helpers */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 700;
+  line-height: 1.25;
+  letter-spacing: -0.02em;
+}
+
+h1 { font-size: 1.85rem; }
+h2 { font-size: 1.45rem; }
+h3 { font-size: 1.2rem; }
+h4 { font-size: 1rem; }
+
+p {
+  color: var(--text-secondary);
+}
+
+a {
+  color: var(--primary);
+  text-decoration: none;
+  transition: color var(--transition-fast);
+}
+
+a:hover {
+  color: var(--text-accent);
+}
+
+/* Utility Classes */
+.text-gradient {
+  background: var(--primary-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.text-gradient-ai {
+  background: var(--ai-gradient);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.card-glass {
+  background: var(--bg-card);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border-default);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-md);
+  transition: transform var(--transition-normal), border-color var(--transition-normal), box-shadow var(--transition-normal);
+}
+
+.card-glass:hover {
+  border-color: var(--border-strong);
+  box-shadow: var(--shadow-lg);
+}
+
+.card-glow-ai {
+  position: relative;
+  overflow: hidden;
+}
+
+.card-glow-ai::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--ai-gradient);
+}
+
+/* Grid Utilities */
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+.grid-4 {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1.25rem;
+}
+
+@media (max-width: 1200px) {
+  .grid-4 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .grid-3 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .grid-4, .grid-3, .grid-2 {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Pulse / Animation utilities */
+@keyframes pulse-glow {
+  0%, 100% {
+    opacity: 0.6;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.05);
+  }
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 3s infinite ease-in-out;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.skeleton {
+  background: linear-gradient(90deg, var(--bg-surface) 25%, var(--bg-surface-elevated) 50%, var(--bg-surface) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+  border-radius: var(--radius-sm);
+}

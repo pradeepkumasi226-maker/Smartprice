@@ -1,0 +1,19 @@
+{
+  "model_name": "SmartPrice Log-Log Price Elasticity Estimator",
+  "model_version": "v1.0.0-elasticity",
+  "trained_at": "2026-10-19T13:38:01.880496+00:00",
+  "dataset_summary": {
+    "total_skus_evaluated": 10,
+    "reliable_fitted_skus": 0,
+    "constant_price_skus": 10,
+    "fallback_skus": 10
+  },
+  "findings": "Evaluated 10 SKUs. 10 SKUs exhibited zero price variation in historical sales records. For these SKUs, econometric slope estimation is mathematically unidentifiable; established catalog elasticity fallbacks are safely retained.",
+  "hyperparameters": {
+    "min_observations": 15,
+    "min_price_cv": 0.04,
+    "max_p_value": 0.1,
+    "min_plausible_elasticity": -6.0,
+    "max_plausible_elasticity": -0.05
+  }
+}
