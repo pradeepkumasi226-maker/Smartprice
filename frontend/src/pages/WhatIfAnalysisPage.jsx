@@ -533,6 +533,37 @@ export const WhatIfAnalysisPage = () => {
           </div>
         </div>
 
+        {/* Simulation Error Alert Banner */}
+        {simulationError && (
+          <div style={{
+            marginBottom: '1.25rem',
+            padding: '0.85rem 1.25rem',
+            background: 'rgba(239, 68, 68, 0.1)',
+            border: '1px solid rgba(239, 68, 68, 0.3)',
+            borderRadius: 'var(--radius-md)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            flexWrap: 'wrap',
+            gap: '0.75rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--danger)', fontSize: '0.84rem' }}>
+              <AlertTriangle size={18} />
+              <span><strong>What-If Simulation Engine Notice:</strong> {simulationError}. Operating with offline client estimation model.</span>
+            </div>
+            <button
+              className="btn btn-sm btn-outline"
+              onClick={() => {
+                setSimulationError(null);
+                setSimulatedPrice(prev => prev);
+              }}
+              style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+            >
+              <RotateCcw size={14} /> Retry Live Engine
+            </button>
+          </div>
+        )}
+
         {activeTab === 'simulator' && (
           <div className="simulator-layout">
             {/* Left Simulator Controls */}

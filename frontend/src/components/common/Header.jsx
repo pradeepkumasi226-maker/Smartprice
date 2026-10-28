@@ -39,7 +39,8 @@ export const Header = ({ onMobileMenuToggle }) => {
     toggleShortcutsModal,
     undoStack,
     undoLastAction,
-    isOfflineMode
+    isOfflineMode,
+    refreshProducts
   } = useStore();
 
   const { user, logout } = useAuth();
@@ -135,7 +136,7 @@ export const Header = ({ onMobileMenuToggle }) => {
               fontWeight: 600,
               letterSpacing: '0.01em'
             }}
-            title="Backend API is disconnected. Operating in offline demonstration mode."
+            title="Backend API is disconnected. Operating in offline demonstration mode with local benchmarks."
           >
             <span
               style={{
@@ -147,7 +148,23 @@ export const Header = ({ onMobileMenuToggle }) => {
                 display: 'inline-block'
               }}
             />
-            <span>Offline Mode</span>
+            <span>Backend Disconnected</span>
+            <button
+              onClick={() => { if (refreshProducts) refreshProducts(); }}
+              style={{
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--danger, #ef4444)',
+                textDecoration: 'underline',
+                fontSize: '0.7rem',
+                cursor: 'pointer',
+                marginLeft: '0.25rem',
+                padding: 0
+              }}
+              title="Click to attempt reconnection to live backend API"
+            >
+              Retry
+            </button>
           </div>
         )}
 

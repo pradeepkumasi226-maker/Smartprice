@@ -250,9 +250,9 @@ export const PriceOptimizationPage = () => {
       setLoadingCurve(true);
       try {
         const matchingProduct = safeProducts.find(p => p.id === selectedOpt.productId || p.sku === selectedOpt.sku);
-        const data = await apiService.getElasticityCurve(selectedOpt.productId || selectedOpt.id || 'prod-001', matchingProduct);
+        const data = await apiService.getElasticityCurve(selectedOpt.sku || selectedOpt.productId || selectedOpt.id || 'prod-001', matchingProduct);
         if (isMounted) {
-          setCurveData(Array.isArray(data) ? data : []);
+          setCurveData(Array.isArray(data) ? data : (data?.points || []));
         }
       } catch (err) {
         console.error("Error loading elasticity curve:", err);

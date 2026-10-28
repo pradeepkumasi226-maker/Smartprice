@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   DollarSign,
   TrendingUp,
@@ -35,6 +35,7 @@ import { ProductFormModal } from '../components/common/ProductFormModal';
 import { DeleteConfirmModal } from '../components/common/DeleteConfirmModal';
 import { BatchActionToolbar } from '../components/common/BatchActionToolbar';
 import { useStore } from '../context/StoreContext';
+import { apiService } from '../services/apiService';
 import { formatCurrency, formatCompactCurrency } from '../utils/currency';
 import {
   filterSalesData,
@@ -68,7 +69,8 @@ export const DashboardPage = () => {
     selectAllProducts,
     clearProductSelection,
     addToast,
-    isOfflineMode
+    isOfflineMode,
+    refreshProducts
   } = useStore();
 
   // Filters & Sorting state
@@ -78,6 +80,51 @@ export const DashboardPage = () => {
   const [sortDirection, setSortDirection] = useState('asc');
   const [revenueHorizon, setRevenueHorizon] = useState('ytd');
   const [forecastHorizon, setForecastHorizon] = useState('7d');
+
+  // Live Backend Data States
+  const [liveSummary, setLiveSummary] = useState(null);
+  const [liveSalesTrends, setLiveSalesTrends] = useState(null);
+  const [liveForecastPoints, setLiveForecastPoints] = useState(null);
+  const [dashError, setDashError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  useEffect(() => {
+    let isCancelled = false;
+    async function loadLiveDashboardData() {
+      if (isOfflineMode) {
+        setLiveSummary(null);
+        setLiveSalesTrends(null);
+        setLiveForecastPoints(null);
+        return;
+      }
+      try {
+        setDashError(null);
+        const [sum, salesT, forecastRes] = await Promise.allSettled([
+          apiService.getDashboardSummary(),
+          apiService.getSales(),
+          apiService.getDemandForecast(forecastHorizon)
+        ]);
+
+        if (!isCancelled) {
+          if (sum.status === 'fulfilled' && sum.value) {
+            setLiveSummary(sum.value);
+          }
+          if (salesT.status === 'fulfilled' && Array.isArray(salesT.value)) {
+            setLiveSalesTrends(salesT.value);
+          }
+          if (forecastRes.status === 'fulfilled' && forecastRes.value && Array.isArray(forecastRes.value.points)) {
+            setLiveForecastPoints(forecastRes.value.points);
+          }
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setDashError(err.message || 'Live dashboard data unreachable');
+        }
+      }
+    }
+    loadLiveDashboardData();
+    return () => { isCancelled = true; };
+  }, [isOfflineMode, forecastHorizon, retryCount]);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -103,8 +150,11 @@ export const DashboardPage = () => {
   }, [filteredSales]);
 
   const demandForecastData = useMemo(() => {
+    if (liveForecastPoints && liveForecastPoints.length > 0) {
+      return liveForecastPoints;
+    }
     return mockDemandTimeline[forecastHorizon] || mockDemandTimeline['7d'];
-  }, [forecastHorizon]);
+  }, [liveForecastPoints, forecastHorizon]);
 
   // Sorting handler
   const handleSort = (field) => {
@@ -169,7 +219,7 @@ export const DashboardPage = () => {
     <div>
       {/* Top Banner Explaining SmartPrice System Purpose */}
       {/* Offline Mode Indicator Banner */}
-      {isOfflineMode && (
+      {(isOfflineMode || dashError) && (
         <div style={{
           marginBottom: '1.25rem',
           padding: '0.75rem 1.25rem',
@@ -178,12 +228,26 @@ export const DashboardPage = () => {
           borderRadius: 'var(--radius-md)',
           display: 'flex',
           alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
           gap: '0.6rem',
           color: 'var(--warning)',
           fontSize: '0.82rem'
         }}>
-          <AlertTriangle size={16} />
-          <span><strong>Offline Mode:</strong> Backend service is unreachable. Financial sales figures and metrics shown are cached demonstration benchmarks, not live database transactions.</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+            <AlertTriangle size={16} />
+            <span><strong>Offline Mode:</strong> {dashError ? `Backend service notice: ${dashError}. ` : 'Backend service is currently unreachable. '}Financial sales figures and metrics shown are cached demonstration benchmarks, not live database transactions.</span>
+          </div>
+          <button
+            className="btn btn-sm btn-outline"
+            onClick={() => {
+              setRetryCount(prev => prev + 1);
+              if (refreshProducts) refreshProducts();
+            }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}
+          >
+            <RotateCcw size={13} /> Retry Live Connection
+          </button>
         </div>
       )}
 
@@ -349,9 +413,14 @@ export const DashboardPage = () => {
         <div className="card-glass" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Realized Sales Revenue Trajectory</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Realized Sales Revenue Trajectory</h3>
+                <Badge variant={isOfflineMode ? "warning" : "success"}>
+                  {isOfflineMode ? "Offline Demo Benchmarks" : "Live Store Ledger"}
+                </Badge>
+              </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                Computed from live transaction ledgers ({revenueHorizon.toUpperCase()})
+                Computed from {isOfflineMode ? 'cached benchmark ledger' : 'live transaction ledgers'} ({revenueHorizon.toUpperCase()})
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
@@ -390,9 +459,14 @@ export const DashboardPage = () => {
         <div className="card-glass" style={{ padding: '1.5rem' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', flexWrap: 'wrap', gap: '0.5rem' }}>
             <div>
-              <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Demand Forecast Horizon</h3>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: 700 }}>Demand Forecast Horizon</h3>
+                <Badge variant={liveForecastPoints ? "ai" : "warning"}>
+                  {liveForecastPoints ? "Live Forecast Model" : "Demo Benchmark"}
+                </Badge>
+              </div>
               <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                P50 predicted volume with confidence bands
+                {liveForecastPoints ? "Empirical model projection from backend" : "P50 predicted volume with confidence bands"}
               </p>
             </div>
             <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
