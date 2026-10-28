@@ -78,9 +78,11 @@ def run_phase1_tests():
         r = client.get("/")
         assert_test(r.status_code == 200 and r.json().get("status") == "online", "GET / returns online health status")
 
-        # 1.2 Auth Login
-        r = client.post("/api/auth/login", json={"identifier": "test.admin@smartprice.ai", "role": "Retail Pricing Director"})
-        assert_test(r.status_code == 200 and r.json().get("success") is True, "POST /api/auth/login authenticates without OTP and returns user profile")
+        # 1.2 Auth Login without OTP
+        r = client.post("/api/auth/login", json={"identifier": "pradeep.retail@smartprice.ai", "password": "SmartPrice@2026!"})
+        assert_test(r.status_code == 200 and r.json().get("success") is True, "POST /api/auth/login authenticates directly and returns user profile")
+        auth_token = r.json().get("session", {}).get("token")
+        auth_headers = {"Authorization": f"Bearer {auth_token}"}
 
         # 1.3 Products Catalog
         r = client.get("/api/products")
@@ -143,7 +145,7 @@ def run_phase1_tests():
         assert_test(r.status_code == 200 and len(curve.get("points", [])) == 15, "GET /api/pricing/ELC-8812/elasticity returns 15-interval simulation curve", f"Points: {len(curve.get('points', []))}")
 
         # 2.3 Dynamic Recalculation
-        recalc_r = client.post("/api/pricing/ELC-8812/recalculate")
+        recalc_r = client.post("/api/pricing/ELC-8812/recalculate", headers=auth_headers)
         assert_test(recalc_r.status_code == 200 and recalc_r.json().get("success") is True, "POST /api/pricing/ELC-8812/recalculate dynamically recalculates recommendation")
 
         # 2.4 Database Persistence: What-If Scenario Creation
@@ -158,7 +160,7 @@ def run_phase1_tests():
             "expected_gross_profit": 53682.0,
             "status": "Staged Draft"
         }
-        scen_res = client.post("/api/what-if/scenarios", json=scen_payload)
+        scen_res = client.post("/api/what-if/scenarios", json=scen_payload, headers=auth_headers)
         assert_test(scen_res.status_code == 201, "POST /api/what-if/scenarios creates scenario row")
         scen_id = scen_res.json()["id"]
 
@@ -176,7 +178,7 @@ def run_phase1_tests():
         stock_before = p_before["stock_quantity"]
         restock_qty = 15
 
-        restock_res = client.post(f"/api/inventory/{restock_sku}/restock", json={"quantity": restock_qty, "user": "E2E Test Runner"})
+        restock_res = client.post(f"/api/inventory/{restock_sku}/restock", json={"quantity": restock_qty, "user": "E2E Test Runner"}, headers=auth_headers)
         assert_test(restock_res.status_code == 200, f"POST /api/inventory/{restock_sku}/restock succeeds")
 
         db_check = SandboxSession()
@@ -192,7 +194,7 @@ def run_phase1_tests():
         # 2.6 Database Persistence: Price Approval & Decision Audit
         approve_sku = "APP-1029"  # Merino Wool Running Jacket (cost: 38.00, current: 89.00)
         target_approved_price = 98.00
-        appr_res = client.post(f"/api/pricing/{approve_sku}/approve", json={"approved_price": target_approved_price, "user": "Pricing Director E2E"})
+        appr_res = client.post(f"/api/pricing/{approve_sku}/approve", json={"approved_price": target_approved_price, "user": "Pricing Director E2E"}, headers=auth_headers)
         assert_test(appr_res.status_code == 200, f"POST /api/pricing/{approve_sku}/approve executes price update")
 
         db_check = SandboxSession()
@@ -214,7 +216,7 @@ def run_phase1_tests():
         # 3.1 Cost Floor Guardrail: Rejection when price < cost without explicit clearance flag
         # ELC-8812 TV cost is 540.00
         tv_cost = 540.00
-        below_cost_attempt = client.post("/api/pricing/ELC-8812/approve", json={"approved_price": 400.00, "user": "E2E Tester"})
+        below_cost_attempt = client.post("/api/pricing/ELC-8812/approve", json={"approved_price": 400.00, "user": "E2E Tester"}, headers=auth_headers)
         assert_test(
             below_cost_attempt.status_code == 400 and "violates margin guardrail" in below_cost_attempt.json().get("detail", ""),
             "Rejection of below-cost price (₹400.00 < cost ₹540.00) with HTTP 400 Bad Request",
@@ -222,8 +224,11 @@ def run_phase1_tests():
         )
 
         # 3.2 Clearance Behavior: Explicit below-cost approval when allow_below_cost=True
+        exec_r = client.post("/api/auth/login", json={"identifier": "marcus.vance@smartprice.ai", "password": "Marcus@SmartPrice2026!"})
+        exec_headers = {"Authorization": f"Bearer {exec_r.json().get('session', {}).get('token')}"}
+
         clearance_price = 450.00
-        clearance_res = client.post(f"/api/pricing/ELC-8812/approve?allow_below_cost=true", json={"approved_price": clearance_price, "user": "Clearance Manager"})
+        clearance_res = client.post(f"/api/pricing/ELC-8812/approve?allow_below_cost=true", json={"approved_price": clearance_price, "user": "Clearance Manager"}, headers=exec_headers)
         assert_test(
             clearance_res.status_code == 200 and clearance_res.json().get("approved_price") == clearance_price,
             "Explicit clearance approval succeeds when allow_below_cost=True is specified",
@@ -252,11 +257,12 @@ def run_phase1_tests():
                 "Dynamic pricing engine strictly enforces custom 20% minimum margin floor",
                 f"Rec: ₹{calc_result['recommended_price']} >= Min Margin Floor: ₹14.40"
             )
-            # Max price shift (+15% of 38.50 = 44.275 -> 44.28)
+            # Max price shift (+15% of current_price)
+            max_cap = round(p_bea.current_price * 1.15, 2)
             assert_test(
-                calc_result["recommended_price"] <= 44.28,
+                calc_result["recommended_price"] <= max_cap + 0.05,
                 "Dynamic pricing engine strictly caps recommended price below max_price_change_pct limit",
-                f"Rec: ₹{calc_result['recommended_price']} <= Max Cap: ₹44.28"
+                f"Rec: ₹{calc_result['recommended_price']} <= Max Cap: ₹{max_cap}"
             )
         finally:
             db_check.close()

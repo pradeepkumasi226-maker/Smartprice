@@ -8,6 +8,8 @@ from .pricing_decision import PricingDecision
 from .what_if_scenario import WhatIfScenario
 from .forecast import Forecast
 from .shap_explanation import ShapExplanation
+from .password_reset import PasswordResetToken
+from .otp import EmailVerificationOTP
 
 __all__ = [
     "Base",
@@ -19,5 +21,7 @@ __all__ = [
     "PricingDecision",
     "WhatIfScenario",
     "Forecast",
-    "ShapExplanation"
+    "ShapExplanation",
+    "PasswordResetToken",
+    "EmailVerificationOTP"
 ]

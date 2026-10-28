@@ -35,11 +35,21 @@ def run_tests():
             if details:
                 print(f"       -> {details}")
 
+    from backend.app.services.email_service import EmailService
+    from backend.app.services.auth_service import otp_resend_rate_limiter
+
+    intercepted_emails = []
+    def mock_sender(email, otp, purpose, subject):
+        intercepted_emails.append({"email": email, "otp": otp, "purpose": purpose})
+
+    EmailService.set_mock_sender(mock_sender)
+    otp_resend_rate_limiter.reset()
+
     # 1. Health & Root
     r = client.get("/")
     assert_test(r.status_code == 200 and r.json().get("status") == "online", "Root endpoint returns online status")
 
-    # 1b. Real Password-Based Authentication
+    # 1b. Real Password-Based Authentication without OTP
     login_req = client.post("/api/auth/login", json={"identifier": "pradeep.retail@smartprice.ai", "password": "SmartPrice@2026!"})
     assert_test(login_req.status_code == 200, "POST /api/auth/login succeeds with valid verified credentials")
     login_data = login_req.json()

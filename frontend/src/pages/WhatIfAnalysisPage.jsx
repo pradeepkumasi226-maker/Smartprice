@@ -33,6 +33,7 @@ import { Badge } from '../components/common/Badge';
 import { SaveScenarioModal } from '../components/common/SaveScenarioModal';
 import { ErrorBoundary } from '../components/common/ErrorBoundary';
 import { useStore } from '../context/StoreContext';
+import { apiService } from '../services/apiService';
 import { formatCurrency, formatCompactCurrency } from '../utils/currency';
 import { calculateOptimalProfitTarget, calculateOptimalRevenueTarget } from '../utils/analytics';
 import {
@@ -89,6 +90,50 @@ export const WhatIfAnalysisPage = () => {
   const [elasticityMultiplier, setElasticityMultiplier] = useState(1.0); // 0.5x to 2.0x
   const [promoDiscount, setPromoDiscount] = useState(0); // 0% to 30%
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
+  const [liveSimulation, setLiveSimulation] = useState(null);
+  const [isSimulating, setIsSimulating] = useState(false);
+  const [simulationError, setSimulationError] = useState(null);
+
+  // Debounced live simulation with backend API
+  useEffect(() => {
+    if (!selectedProduct) return;
+    let isCancelled = false;
+    const timer = setTimeout(async () => {
+      try {
+        setIsSimulating(true);
+        setSimulationError(null);
+        const result = await apiService.simulateWhatIf(
+          selectedProduct.sku || selectedProduct.id,
+          simulatedPrice,
+          {
+            productId: selectedProduct.id,
+            sku: selectedProduct.sku,
+            competitorOffset,
+            elasticityMultiplier,
+            promoDiscount,
+            product: selectedProduct
+          }
+        );
+        if (!isCancelled && result) {
+          setLiveSimulation(result);
+        }
+      } catch (err) {
+        if (!isCancelled) {
+          setSimulationError(err.message || 'Live simulation unavailable');
+          setLiveSimulation(null);
+        }
+      } finally {
+        if (!isCancelled) {
+          setIsSimulating(false);
+        }
+      }
+    }, 150);
+
+    return () => {
+      isCancelled = true;
+      clearTimeout(timer);
+    };
+  }, [selectedProduct, simulatedPrice, competitorOffset, elasticityMultiplier, promoDiscount]);
 
   // Sync when product changes or initial param arrives
   useEffect(() => {
@@ -203,6 +248,33 @@ export const WhatIfAnalysisPage = () => {
       };
     }
 
+    if (liveSimulation) {
+      return {
+        product: selectedProduct,
+        simulatedPrice: liveSimulation.simulatedPrice,
+        rawSimulatedPrice: simulatedPrice,
+        baselinePrice: liveSimulation.baselinePrice,
+        simulatedDemand: liveSimulation.simulatedDemand,
+        baselineDemand: liveSimulation.baselineDemand,
+        demandDelta: liveSimulation.demandDelta,
+        demandPercentDelta: String(liveSimulation.demandPercentDelta),
+        simulatedRevenue: liveSimulation.simulatedRevenue,
+        baselineRevenue: liveSimulation.baselineRevenue,
+        revenueDelta: liveSimulation.revenueDelta,
+        revenuePercentDelta: Number(liveSimulation.revenuePercentDelta),
+        simulatedProfit: liveSimulation.simulatedProfit,
+        baselineProfit: liveSimulation.baselineProfit,
+        profitDelta: liveSimulation.profitDelta,
+        profitPercentDelta: String(liveSimulation.profitPercentDelta),
+        marginPercent: liveSimulation.marginPercent,
+        baselineMargin: liveSimulation.baselineMargin,
+        effectiveCompetitor: liveSimulation.competitorPrice,
+        isPriceHigherThanCompetitor: liveSimulation.isPriceHigherThanCompetitor,
+        recommendation,
+        isLive: true
+      };
+    }
+
     return {
       product: selectedProduct,
       simulatedPrice: effectiveSimulatedPrice,
@@ -224,9 +296,10 @@ export const WhatIfAnalysisPage = () => {
       baselineMargin: `${baselineMargin}%`,
       effectiveCompetitor,
       isPriceHigherThanCompetitor: effectiveSimulatedPrice > effectiveCompetitor,
-      recommendation
+      recommendation,
+      isLive: false
     };
-  }, [selectedProduct, simulatedPrice, competitorOffset, elasticityMultiplier, promoDiscount]);
+  }, [selectedProduct, simulatedPrice, competitorOffset, elasticityMultiplier, promoDiscount, liveSimulation]);
 
   // Strategy Presets Handlers
   const resetToBaseline = () => {
@@ -736,6 +809,9 @@ export const WhatIfAnalysisPage = () => {
                         }>
                           {simulationResult?.recommendation?.action || 'Evaluate'}
                         </Badge>
+                        <Badge variant={simulationResult?.isLive ? "ai" : "warning"}>
+                          {simulationResult?.isLive ? "Engine: Live Backend API" : "Engine: Offline Model"}
+                        </Badge>
                       </div>
                       <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginTop: '0.35rem', lineHeight: 1.5 }}>
                         {simulationResult?.recommendation?.details || 'Evaluate simulated pricing scenario against baseline performance.'}
@@ -756,6 +832,24 @@ export const WhatIfAnalysisPage = () => {
                   </div>
                 </div>
               </div>
+
+              {simulationError && (
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.65rem 1rem',
+                  background: 'rgba(234, 179, 8, 0.08)',
+                  border: '1px solid rgba(234, 179, 8, 0.25)',
+                  borderRadius: 'var(--radius-md)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  color: 'var(--warning)',
+                  fontSize: '0.78rem'
+                }}>
+                  <AlertTriangle size={15} />
+                  <span>Live backend simulation unavailable ({simulationError}). Displaying local mathematical projections.</span>
+                </div>
+              )}
 
             {/* 6 & 7. KPI Outcome Cards (Estimated Demand, Revenue, Profit & Margin) */}
             <div className="grid-4" style={{ marginBottom: '1.5rem' }}>

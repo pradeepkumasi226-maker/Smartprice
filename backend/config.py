@@ -7,11 +7,30 @@ from typing import Optional
 import secrets
 import logging
 
+from dotenv import load_dotenv
+
 logger = logging.getLogger("smartprice.config")
 
-BASE_DIR = Path(__file__).resolve().parent
-DATA_DIR = BASE_DIR / "data"
+BACKEND_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = BACKEND_DIR.parent
+DATA_DIR = BACKEND_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
+
+BACKEND_ENV_PATH = BACKEND_DIR / ".env"
+ROOT_ENV_PATH = PROJECT_ROOT / ".env"
+
+def reload_environment():
+    """
+    Reloads environment variables from project .env and backend/.env using absolute paths.
+    Ensures running applications, tests, and CLI scripts pick up modified credentials immediately.
+    """
+    if ROOT_ENV_PATH.is_file():
+        load_dotenv(ROOT_ENV_PATH)
+    if BACKEND_ENV_PATH.is_file():
+        load_dotenv(BACKEND_ENV_PATH, override=True)
+
+# Explicitly load local environment configurations at module import
+reload_environment()
 
 class Settings(BaseSettings):
     PROJECT_NAME: str = "SmartPrice AI Retail Engine"
@@ -26,7 +45,14 @@ class Settings(BaseSettings):
     OTP_EXPIRY_MINUTES: int = 5
     OTP_LENGTH: int = 6
     MAX_OTP_ATTEMPTS: int = 5
-    OTP_RESEND_COOLDOWN_SECONDS: int = 30
+    OTP_RESEND_COOLDOWN_SECONDS: int = 60
+
+    # Gmail SMTP Configuration
+    SMTP_HOST: str = "smtp.gmail.com"
+    SMTP_PORT: int = 587
+    SMTP_USERNAME: Optional[str] = None
+    SMTP_APP_PASSWORD: Optional[str] = None
+    SMTP_FROM_EMAIL: Optional[str] = None
 
     LOGIN_RATE_LIMIT_MAX_ATTEMPTS: int = 5
     LOGIN_RATE_LIMIT_WINDOW_SECONDS: int = 60
@@ -76,8 +102,44 @@ class Settings(BaseSettings):
     SMS_GATEWAY_URL: Optional[str] = None
     SMS_GATEWAY_API_KEY: Optional[str] = None
 
+    def refresh_from_env(self) -> None:
+        """
+        Dynamically refreshes settings from project and backend .env files.
+        Ensures running processes immediately detect credential edits without server restarts.
+        """
+        reload_environment()
+        self.SMTP_HOST = os.getenv("SMTP_HOST", self.SMTP_HOST)
+        try:
+            self.SMTP_PORT = int(os.getenv("SMTP_PORT", str(self.SMTP_PORT)))
+        except (ValueError, TypeError):
+            pass
+        self.SMTP_USERNAME = os.getenv("SMTP_USERNAME", self.SMTP_USERNAME)
+        self.SMTP_APP_PASSWORD = os.getenv("SMTP_APP_PASSWORD", self.SMTP_APP_PASSWORD)
+        self.SMTP_FROM_EMAIL = os.getenv("SMTP_FROM_EMAIL", self.SMTP_FROM_EMAIL)
+
+    def get_smtp_config(self) -> dict:
+        """
+        Returns clean, dynamically loaded SMTP settings.
+        Handles leading/trailing whitespaces and empty strings safely.
+        """
+        self.refresh_from_env()
+        raw_user = (self.SMTP_USERNAME or "").strip()
+        raw_pwd = (self.SMTP_APP_PASSWORD or "").strip()
+        raw_from = (self.SMTP_FROM_EMAIL or "").strip() or raw_user
+
+        return {
+            "host": self.SMTP_HOST,
+            "port": self.SMTP_PORT,
+            "username": raw_user if raw_user else None,
+            "password": raw_pwd if raw_pwd else None,
+            "from_email": raw_from if raw_from else None,
+            "loaded_from": str(BACKEND_ENV_PATH if BACKEND_ENV_PATH.is_file() else ROOT_ENV_PATH),
+            "backend_env_exists": BACKEND_ENV_PATH.is_file(),
+            "root_env_exists": ROOT_ENV_PATH.is_file(),
+        }
+
     model_config = SettingsConfigDict(
-        env_file=[BASE_DIR.parent / ".env", BASE_DIR / ".env"],
+        env_file=[str(ROOT_ENV_PATH), str(BACKEND_ENV_PATH)],
         env_file_encoding="utf-8",
         extra="ignore"
     )

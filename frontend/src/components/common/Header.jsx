@@ -16,10 +16,12 @@ import {
   VolumeX,
   Keyboard,
   RotateCcw,
-  Command
+  Command,
+  KeyRound
 } from 'lucide-react';
 import { useStore } from '../../context/StoreContext';
 import { useAuth } from '../../context/AuthContext';
+import { ChangePasswordModal } from './ChangePasswordModal';
 
 export const Header = ({ onMobileMenuToggle }) => {
   const {
@@ -36,12 +38,14 @@ export const Header = ({ onMobileMenuToggle }) => {
     toggleCommandPalette,
     toggleShortcutsModal,
     undoStack,
-    undoLastAction
+    undoLastAction,
+    isOfflineMode
   } = useStore();
 
   const { user, logout } = useAuth();
   const [showNotifications, setShowNotifications] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
+  const [isChangePasswordOpen, setIsChangePasswordOpen] = useState(false);
   const notifRef = useRef(null);
   const userMenuRef = useRef(null);
 
@@ -114,6 +118,39 @@ export const Header = ({ onMobileMenuToggle }) => {
       </div>
 
       <div className="header-right">
+        {/* Global Disconnected / Offline Indicator */}
+        {isOfflineMode && (
+          <div
+            className="offline-status-badge"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              padding: '0.25rem 0.75rem',
+              borderRadius: 'var(--radius-full, 9999px)',
+              background: 'rgba(239, 68, 68, 0.12)',
+              border: '1px solid rgba(239, 68, 68, 0.35)',
+              color: 'var(--danger, #ef4444)',
+              fontSize: '0.74rem',
+              fontWeight: 600,
+              letterSpacing: '0.01em'
+            }}
+            title="Backend API is disconnected. Operating in offline demonstration mode."
+          >
+            <span
+              style={{
+                width: 7,
+                height: 7,
+                borderRadius: '50%',
+                backgroundColor: 'var(--danger, #ef4444)',
+                boxShadow: '0 0 6px rgba(239, 68, 68, 0.6)',
+                display: 'inline-block'
+              }}
+            />
+            <span>Offline Mode</span>
+          </div>
+        )}
+
         {/* Store branch selector */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <Store size={15} color="var(--text-muted)" />
@@ -293,6 +330,18 @@ export const Header = ({ onMobileMenuToggle }) => {
 
               <button
                 className="settings-nav-item"
+                style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}
+                onClick={() => {
+                  setShowUserMenu(false);
+                  setIsChangePasswordOpen(true);
+                }}
+              >
+                <KeyRound size={14} color="var(--primary)" />
+                <span>Change Password</span>
+              </button>
+
+              <button
+                className="settings-nav-item"
                 style={{ fontSize: '0.8rem', padding: '0.5rem 0.75rem', color: 'var(--danger)' }}
                 onClick={() => {
                   setShowUserMenu(false);
@@ -307,6 +356,11 @@ export const Header = ({ onMobileMenuToggle }) => {
           )}
         </div>
       </div>
+
+      <ChangePasswordModal
+        isOpen={isChangePasswordOpen}
+        onClose={() => setIsChangePasswordOpen(false)}
+      />
     </header>
   );
 };

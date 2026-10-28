@@ -6,11 +6,11 @@ timeline chart points, and product-level forecast summaries across all
 forecast horizons (7d, 30d, 90d), product scopes, and retail categories.
 
 Required coverage:
-1. Exact reconciliation for 7d catalog forecast: Headline == Sum(points) == Sum(product rows) == 2,755 units.
-2. Exact reconciliation for 30d catalog forecast: Headline == Sum(points) == Sum(product rows) == 11,571 units.
-3. Exact reconciliation for 90d catalog forecast: Headline == Sum(points) == Sum(product rows) == 34,437 units.
-4. Exact reconciliation for SKU filter (ELC-8812): Headline == Sum(points) == 140 units.
-5. Exact reconciliation for Category filter (Electronics): Headline == Sum(points) == Sum(product rows) == 460 units.
+1. Exact reconciliation for 7d catalog forecast: Headline == Sum(points) == Sum(product rows) == 2,985 units.
+2. Exact reconciliation for 30d catalog forecast: Headline == Sum(points) == Sum(product rows) == 12,537 units.
+3. Exact reconciliation for 90d catalog forecast: Headline == Sum(points) == Sum(product rows) == 37,312 units.
+4. Exact reconciliation for SKU filter (ELC-8812): Headline == Sum(points) == 370 units.
+5. Exact reconciliation for Category filter (Electronics): Headline == Sum(points) == Sum(product rows) == 690 units.
 6. Unified horizon definition (7d=daily, 30d=weekly, 90d=monthly) and query param aliases (time_range & horizon).
 7. Elimination of fictitious model claims: truthful reporting of forecaster engine.
 8. Validation metrics integrity (WAPE 48.1%, MAE 31.26 units).
@@ -67,18 +67,18 @@ def run_tests():
     head_7d = fc_7d.get("total_predicted_demand")
 
     assert_test(
-        sum_p7 == 2755,
-        "Sum of product-level 7-day forecast rows equals 2,755 units",
+        sum_p7 == 2985,
+        "Sum of product-level 7-day forecast rows equals 2,985 units",
         f"Sum across 10 products: {sum_p7}"
     )
     assert_test(
-        head_7d == 2755,
-        "Headline total_predicted_demand equals 2,755 units (no 358 unscaled mismatch)",
+        head_7d == 2985,
+        "Headline total_predicted_demand equals 2,985 units (no 358 unscaled mismatch)",
         f"Headline total: {head_7d}"
     )
     assert_test(
-        sum_pts7 == 2755,
-        "Sum of 7 daily forecast timeline points equals 2,755 units",
+        sum_pts7 == 2985,
+        "Sum of 7 daily forecast timeline points equals 2,985 units",
         f"Timeline points sum: {sum_pts7}"
     )
     assert_test(
@@ -109,18 +109,18 @@ def run_tests():
     head_30d = fc_30d.get("total_predicted_demand")
 
     assert_test(
-        sum_p30 == 11571,
-        "Sum of product-level 30-day forecast rows equals 11,571 units",
+        sum_p30 == 12537,
+        "Sum of product-level 30-day forecast rows equals 12,537 units",
         f"Sum across products: {sum_p30}"
     )
     assert_test(
-        head_30d == 11571,
-        "Headline total_predicted_demand for 30d equals 11,571 units",
+        head_30d == 12537,
+        "Headline total_predicted_demand for 30d equals 12,537 units",
         f"Headline total: {head_30d}"
     )
     assert_test(
-        sum_pts30 == 11571,
-        "Sum of 4 weekly forecast timeline points equals 11,571 units",
+        sum_pts30 == 12537,
+        "Sum of 4 weekly forecast timeline points equals 12,537 units",
         f"Timeline points sum: {sum_pts30}"
     )
     assert_test(
@@ -151,18 +151,18 @@ def run_tests():
     head_90d = fc_90d.get("total_predicted_demand")
 
     assert_test(
-        sum_p90 == 34437,
-        "Sum of product-level 90-day forecast rows equals 34,437 units",
+        sum_p90 == 37312,
+        "Sum of product-level 90-day forecast rows equals 37,312 units",
         f"Sum across products: {sum_p90}"
     )
     assert_test(
-        head_90d == 34437,
-        "Headline total_predicted_demand for 90d equals 34,437 units",
+        head_90d == 37312,
+        "Headline total_predicted_demand for 90d equals 37,312 units",
         f"Headline total: {head_90d}"
     )
     assert_test(
-        sum_pts90 == 34437,
-        "Sum of 3 monthly forecast timeline points equals 34,437 units",
+        sum_pts90 == 37312,
+        "Sum of 3 monthly forecast timeline points equals 37,312 units",
         f"Timeline points sum: {sum_pts90}"
     )
     assert_test(
@@ -188,13 +188,13 @@ def run_tests():
     sku_pts = sum(pt["predicted_demand"] for pt in fc_sku.get("points", []))
 
     assert_test(
-        sku_head == 140,
-        "ELC-8812 headline total matches product baseline (140 units, not 36)",
+        sku_head == 370,
+        "ELC-8812 headline total matches product baseline (370 units, not 36)",
         f"Headline: {sku_head}"
     )
     assert_test(
-        sku_pts == 140,
-        "ELC-8812 timeline points sum matches product baseline (140 units)",
+        sku_pts == 370,
+        "ELC-8812 timeline points sum matches product baseline (370 units)",
         f"Points sum: {sku_pts}"
     )
     assert_test(
@@ -225,18 +225,18 @@ def run_tests():
         f"SKUs: {[p['sku'] for p in products_cat]}"
     )
     assert_test(
-        cat_p == 460,
-        "Electronics product rows sum to 460 units (320 + 140)",
+        cat_p == 690,
+        "Electronics product rows sum to 690 units (320 + 370)",
         f"Sum: {cat_p}"
     )
     assert_test(
-        cat_head == 460,
-        "Electronics headline total equals 460 units",
+        cat_head == 690,
+        "Electronics headline total equals 690 units",
         f"Headline: {cat_head}"
     )
     assert_test(
-        cat_pts == 460,
-        "Electronics timeline points sum to 460 units",
+        cat_pts == 690,
+        "Electronics timeline points sum to 690 units",
         f"Points sum: {cat_pts}"
     )
 
@@ -246,14 +246,14 @@ def run_tests():
     print("\n--- 6. Horizon Aliases & Fallbacks ---")
     res_alias = client.get("/api/forecast?horizon=30d")
     assert_test(
-        res_alias.status_code == 200 and res_alias.json().get("total_predicted_demand") == 11571,
-        "Query param alias '?horizon=30d' produces identical 11,571 unit forecast"
+        res_alias.status_code == 200 and res_alias.json().get("total_predicted_demand") == 12537,
+        "Query param alias '?horizon=30d' produces identical 12,537 unit forecast"
     )
 
     res_prod_alias = client.get("/api/forecast/products?horizon=90d")
     assert_test(
-        res_prod_alias.status_code == 200 and sum(p["predicted_demand_units"] for p in res_prod_alias.json()) == 34437,
-        "Products query param alias '?horizon=90d' produces identical 34,437 unit total"
+        res_prod_alias.status_code == 200 and sum(p["predicted_demand_units"] for p in res_prod_alias.json()) == 37312,
+        "Products query param alias '?horizon=90d' produces identical 37,312 unit total"
     )
 
     res_missing = client.get("/api/forecast?sku=NON-EXISTENT-SKU")

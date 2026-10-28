@@ -2,6 +2,7 @@ from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
 from typing import Optional, List, Callable
+from datetime import timezone
 import jwt
 
 from ...database import get_db
@@ -65,6 +66,21 @@ def get_current_user(
             detail="Authorized user record not found in system.",
             headers={"WWW-Authenticate": "Bearer"}
         )
+
+    # Session revocation check: invalidate token if password was updated after issuance
+    if getattr(user, "password_changed_at", None):
+        token_iat = payload.get("iat")
+        if token_iat:
+            dt = user.password_changed_at
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=timezone.utc)
+            changed_timestamp = int(dt.timestamp())
+            if token_iat < changed_timestamp:
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Session has been revoked due to a password change. Please log in again.",
+                    headers={"WWW-Authenticate": "Bearer"}
+                )
 
     return user
 

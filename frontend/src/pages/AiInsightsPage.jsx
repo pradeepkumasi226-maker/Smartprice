@@ -11,7 +11,9 @@ import {
   Zap,
   Target,
   Sliders,
-  Plus
+  Plus,
+  AlertTriangle,
+  RotateCcw
 } from 'lucide-react';
 import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
@@ -29,6 +31,12 @@ export const AiInsightsPage = () => {
   );
   const [productShap, setProductShap] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [shapError, setShapError] = useState(null);
+  const [retryCount, setRetryCount] = useState(0);
+
+  const handleRetry = () => {
+    setRetryCount(prev => prev + 1);
+  };
 
   useEffect(() => {
     if (pageParams?.productId) {
@@ -43,19 +51,25 @@ export const AiInsightsPage = () => {
       if (products.length === 0) return;
       try {
         setLoading(true);
+        setShapError(null);
         const currentProd = products.find(p => p.id === selectedProductId) || products[0];
         const [features, decomp] = await Promise.all([
           apiService.getShapGlobalFeatures(),
           apiService.getShapProductDecomposition(selectedProductId, currentProd)
         ]);
-        setGlobalFeatures(features);
+        setGlobalFeatures(Array.isArray(features) ? features : []);
         setProductShap(decomp);
+      } catch (err) {
+        console.error("Failed to load SHAP data:", err);
+        setShapError(err.message || 'Failed to load Explainable AI / SHAP insights');
+        setGlobalFeatures([]);
+        setProductShap(null);
       } finally {
         setLoading(false);
       }
     }
     loadShapData();
-  }, [selectedProductId, products]);
+  }, [selectedProductId, products, retryCount]);
 
   if (products.length === 0) {
     return (
@@ -92,25 +106,51 @@ export const AiInsightsPage = () => {
               <strong>Why was this price recommended?</strong> SmartPrice provides transparent feature attribution decomposing how Competitor Benchmark, Demand Elasticity, Inventory Buffer, and Margin Guardrails drive pricing decisions.
             </p>
           </div>
-          <Badge variant="ai">
-            {productShap?.is_genuine_shap
-              ? `XAI Model: ${productShap.model_version}`
-              : `Method: ${productShap?.model_version || 'Deterministic Rule Attribution'}`}
+          <Badge variant={shapError ? "danger" : "ai"}>
+            {shapError
+              ? "XAI Engine: Disconnected"
+              : productShap?.is_genuine_shap
+                ? `XAI Model: ${productShap.model_version}`
+                : `Method: ${productShap?.model_version || 'Deterministic Rule Attribution'}`}
           </Badge>
         </div>
       </div>
 
+      {/* SHAP Error Banner */}
+      {shapError && (
+        <div style={{
+          marginBottom: '1.5rem',
+          padding: '1rem 1.25rem',
+          background: 'rgba(239, 68, 68, 0.1)',
+          border: '1px solid rgba(239, 68, 68, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          flexWrap: 'wrap',
+          gap: '0.75rem'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: 'var(--danger)', fontSize: '0.85rem' }}>
+            <AlertTriangle size={18} />
+            <span><strong>Explainable AI Service Unavailable:</strong> {shapError}. Live SHAP explanations cannot be retrieved from the backend.</span>
+          </div>
+          <button className="btn btn-sm btn-outline" onClick={handleRetry} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+            <RotateCcw size={14} /> Retry Analysis
+          </button>
+        </div>
+      )}
+
       {/* Model Performance & Health Overview */}
       <div className="grid-4" style={{ marginBottom: '1.5rem' }}>
         <MetricCard
-          title={productShap?.is_genuine_shap ? "Global Model R² Fit" : "Attribution Engine"}
-          value={productShap?.r2_score !== null && productShap?.r2_score !== undefined ? String(productShap.r2_score) : "Rule-Based"}
-          subvalue={productShap?.is_genuine_shap ? "High variance explanation" : "Deterministic decision logic"}
-          trend="up"
-          trendValue="Verified"
+          title={shapError ? "Attribution Engine" : productShap?.is_genuine_shap ? "Global Model R² Fit" : "Attribution Engine"}
+          value={shapError ? "Unavailable" : (productShap?.r2_score !== null && productShap?.r2_score !== undefined ? String(productShap.r2_score) : "Rule-Based")}
+          subvalue={shapError ? "Service disconnected" : (productShap?.is_genuine_shap ? "High variance explanation" : "Deterministic decision logic")}
+          trend={shapError ? "neutral" : "up"}
+          trendValue={shapError ? "Offline" : "Verified"}
           icon={Target}
-          iconColor="#10B981"
-          iconBg="rgba(16, 185, 129, 0.12)"
+          iconColor={shapError ? "var(--text-muted)" : "#10B981"}
+          iconBg={shapError ? "rgba(100, 116, 139, 0.12)" : "rgba(16, 185, 129, 0.12)"}
         />
         <MetricCard
           title="Explanation Currency"
@@ -124,23 +164,23 @@ export const AiInsightsPage = () => {
         />
         <MetricCard
           title="Top Decision Driver"
-          value={globalFeatures[0]?.feature || "Competitor Gap"}
-          subvalue={globalFeatures[0]?.importance ? `${Math.round(globalFeatures[0].importance * 100)}% Global attribution` : "38% Global weight"}
+          value={shapError ? "Unavailable" : (globalFeatures[0]?.feature || "Competitor Gap")}
+          subvalue={shapError ? "Attribution offline" : (globalFeatures[0]?.importance ? `${Math.round(globalFeatures[0].importance * 100)}% Global attribution` : "38% Global weight")}
           trend="neutral"
-          trendValue="Primary Factor"
+          trendValue={shapError ? "--" : "Primary Factor"}
           icon={TrendingUp}
-          iconColor="#06B6D4"
-          iconBg="rgba(6, 182, 212, 0.12)"
+          iconColor={shapError ? "var(--text-muted)" : "#06B6D4"}
+          iconBg={shapError ? "rgba(100, 116, 139, 0.12)" : "rgba(6, 182, 212, 0.12)"}
         />
         <MetricCard
           title="Attribution Integrity"
-          value="100% Additive"
-          subvalue="All driver deltas reconcile to recommendation"
-          trend="up"
-          trendValue="Certified"
+          value={shapError ? "Unavailable" : "100% Additive"}
+          subvalue={shapError ? "Reconciliation unavailable" : "All driver deltas reconcile to recommendation"}
+          trend={shapError ? "neutral" : "up"}
+          trendValue={shapError ? "--" : "Certified"}
           icon={ShieldCheck}
-          iconColor="#8B5CF6"
-          iconBg="rgba(139, 92, 246, 0.12)"
+          iconColor={shapError ? "var(--text-muted)" : "#8B5CF6"}
+          iconBg={shapError ? "rgba(100, 116, 139, 0.12)" : "rgba(139, 92, 246, 0.12)"}
         />
       </div>
 
@@ -155,13 +195,35 @@ export const AiInsightsPage = () => {
                 Aggregated decision driver attribution across entire retail catalog
               </p>
             </div>
+            {shapError && (
+              <button className="btn btn-sm btn-outline" onClick={handleRetry} style={{ display: 'flex', alignItems: 'center', gap: '0.35rem' }}>
+                <RotateCcw size={13} /> Retry
+              </button>
+            )}
           </div>
 
-          <ShapFeatureImportanceChart features={globalFeatures} height={290} />
+          {loading ? (
+            <div style={{ height: 290, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--text-secondary)' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--border-default)', borderTopColor: 'var(--text-ai)', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.85rem' }}>Loading global attribution weights...</span>
+            </div>
+          ) : shapError ? (
+            <div style={{ height: 290, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '1.5rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', borderRadius: 'var(--radius-md)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <AlertTriangle size={28} color="var(--danger)" />
+              <div style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--danger)' }}>Global Feature Weights Unavailable</div>
+              <p style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', maxWidth: '360px' }}>
+                Backend explainability endpoint failed. Mock weights are suppressed to prevent misleading attribution.
+              </p>
+            </div>
+          ) : (
+            <ShapFeatureImportanceChart features={globalFeatures} height={290} />
+          )}
 
-          <div style={{ marginTop: '1.25rem', padding: '0.85rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
-            <strong>Calculation:</strong> Decision driver weights aggregated from catalog pricing rules and margin boundaries.
-          </div>
+          {!shapError && (
+            <div style={{ marginTop: '1.25rem', padding: '0.85rem', borderRadius: 'var(--radius-md)', background: 'var(--bg-surface)', border: '1px solid var(--border-subtle)', fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+              <strong>Calculation:</strong> Decision driver weights aggregated from catalog pricing rules and margin boundaries.
+            </div>
+          )}
         </div>
 
         {/* Local Product-Level Attribution */}
@@ -191,7 +253,25 @@ export const AiInsightsPage = () => {
             </div>
           </div>
 
-          <ShapWaterfallChart shapData={productShap} />
+          {loading ? (
+            <div className="card-glass" style={{ height: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', color: 'var(--text-secondary)' }}>
+              <div style={{ width: 32, height: 32, borderRadius: '50%', border: '3px solid var(--border-default)', borderTopColor: 'var(--text-ai)', animation: 'spin 1s linear infinite' }} />
+              <span style={{ fontSize: '0.85rem' }}>Decomposing pricing drivers for SKU...</span>
+            </div>
+          ) : shapError ? (
+            <div className="card-glass" style={{ height: 320, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', padding: '1.5rem', textAlign: 'center', background: 'rgba(239, 68, 68, 0.05)', border: '1px solid rgba(239, 68, 68, 0.2)' }}>
+              <AlertTriangle size={32} color="var(--danger)" />
+              <div style={{ fontSize: '0.92rem', fontWeight: 700, color: 'var(--danger)' }}>SHAP Decomposition Unavailable</div>
+              <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', maxWidth: '400px' }}>
+                Unable to load waterfall explanation for {selectedProductId}. Connect backend API to inspect live decision drivers.
+              </p>
+              <button className="btn btn-outline btn-sm" onClick={handleRetry} style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <RotateCcw size={14} /> Retry Analysis
+              </button>
+            </div>
+          ) : (
+            <ShapWaterfallChart shapData={productShap} />
+          )}
 
           <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '0.25rem' }}>
             <button

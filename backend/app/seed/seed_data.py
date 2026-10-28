@@ -22,6 +22,7 @@ def seed_database(force: bool = False):
         existing_count = db.query(Product).count()
         if existing_count > 0 and not force:
             print(f"[Seed] Database already contains {existing_count} products. Skipping seeding.")
+            db.close()
             return
 
         if force:

@@ -14,10 +14,17 @@ import {
   DollarSign,
   Sun,
   Moon,
-  Palette
+  Palette,
+  Eye,
+  EyeOff,
+  AlertCircle,
+  KeyRound,
+  ShieldCheck,
+  UserCheck
 } from 'lucide-react';
 import { useStore } from '../context/StoreContext';
 import { useTheme } from '../context/ThemeContext';
+import { useAuth } from '../context/AuthContext';
 import { Badge } from '../components/common/Badge';
 
 // ─── Persistence helpers (mirrors StoreContext pattern) ────────────────────────
@@ -62,7 +69,62 @@ const DEFAULTS = {
 export const SettingsPage = () => {
   const { addToast, currency, setCurrency, settings: storeSettings, updateSettings } = useStore();
   const { theme, setTheme } = useTheme();
+  const { user, changePassword } = useAuth();
   const [activeTab, setActiveTab] = useState('guardrails');
+
+  // Security & Password state
+  const [secCurrentPassword, setSecCurrentPassword] = useState('');
+  const [secNewPassword, setSecNewPassword] = useState('');
+  const [secConfirmPassword, setSecConfirmPassword] = useState('');
+  const [showSecCurrent, setShowSecCurrent] = useState(false);
+  const [showSecNew, setShowSecNew] = useState(false);
+  const [secLoading, setSecLoading] = useState(false);
+  const [secError, setSecError] = useState('');
+  const [secSuccess, setSecSuccess] = useState('');
+
+  const handleSecuritySave = async (e) => {
+    e.preventDefault();
+    setSecError('');
+    setSecSuccess('');
+
+    if (!secCurrentPassword) {
+      setSecError('Current password is required.');
+      return;
+    }
+    if (secNewPassword.length < 8) {
+      setSecError('New password must be at least 8 characters long.');
+      return;
+    }
+    const hasLetter = /[a-zA-Z]/.test(secNewPassword);
+    const hasDigitOrSpecial = /[0-9]|[^a-zA-Z0-9]/.test(secNewPassword);
+    if (!hasLetter || !hasDigitOrSpecial) {
+      setSecError('New password must contain at least one letter and at least one number or symbol.');
+      return;
+    }
+    if (secNewPassword !== secConfirmPassword) {
+      setSecError('New password and confirmation password do not match.');
+      return;
+    }
+    if (secCurrentPassword === secNewPassword) {
+      setSecError('New password cannot be identical to your current password.');
+      return;
+    }
+
+    setSecLoading(true);
+    try {
+      const res = await changePassword(secCurrentPassword, secNewPassword, secConfirmPassword);
+      setSecSuccess(res?.message || 'Password changed successfully! All prior sessions have been revoked.');
+      setSecCurrentPassword('');
+      setSecNewPassword('');
+      setSecConfirmPassword('');
+      if (addToast) addToast('Security Updated', 'Your password was changed and prior sessions revoked.', 'success');
+    } catch (err) {
+      setSecError(err?.message || 'Failed to update password.');
+      if (addToast) addToast('Update Failed', err?.message || 'Failed to update password.', 'danger');
+    } finally {
+      setSecLoading(false);
+    }
+  };
 
   // Load persisted settings once on mount; fall back to DEFAULTS for each key
   const [saved] = useState(() => storeSettings ?? loadSettings() ?? {});
@@ -224,6 +286,14 @@ export const SettingsPage = () => {
             >
               <Palette size={16} />
               <span>Appearance</span>
+            </button>
+
+            <button
+              className={`settings-nav-item ${activeTab === 'security' ? 'active' : ''}`}
+              onClick={() => setActiveTab('security')}
+            >
+              <KeyRound size={16} />
+              <span>Security & Password</span>
             </button>
           </div>
         </div>
@@ -607,6 +677,184 @@ export const SettingsPage = () => {
                 <Settings size={13} />
                 <span>Theme preference is saved automatically and persists after browser refresh.</span>
               </div>
+            </div>
+          )}
+
+          {/* Tab 6: Security & Password */}
+          {activeTab === 'security' && (
+            <div>
+              <div className="settings-panel-header">
+                <div>
+                  <h3 className="settings-panel-title">Security & Authentication</h3>
+                  <p className="settings-panel-desc">
+                    Manage your credentials, password complexity, and session invalidation policies.
+                  </p>
+                </div>
+              </div>
+
+              {/* User Identity Banner */}
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '1rem',
+                padding: '1rem',
+                borderRadius: 'var(--radius-md)',
+                background: 'var(--bg-surface)',
+                border: '1px solid var(--border-subtle)',
+                marginBottom: '1.5rem'
+              }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: 'var(--radius-sm)',
+                  background: 'var(--primary-light)',
+                  color: 'var(--primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <ShieldCheck size={22} />
+                </div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: '0.92rem' }}>{user?.name || 'Verified User'}</div>
+                  <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)' }}>
+                    {user?.identifier || user?.email} • <span style={{ color: 'var(--primary)', fontWeight: 600 }}>{user?.role}</span>
+                  </div>
+                </div>
+                <div style={{ marginLeft: 'auto' }}>
+                  <Badge variant="primary">Active Account</Badge>
+                </div>
+              </div>
+
+              {secError && (
+                <div className="alert-banner alert-danger" style={{ marginBottom: '1.25rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertCircle size={16} style={{ flexShrink: 0 }} />
+                  <span>{secError}</span>
+                </div>
+              )}
+
+              {secSuccess && (
+                <div className="alert-banner alert-success" style={{ marginBottom: '1.25rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckCircle2 size={16} style={{ flexShrink: 0 }} />
+                  <span>{secSuccess}</span>
+                </div>
+              )}
+
+              <form onSubmit={handleSecuritySave}>
+                <div className="settings-field-row">
+                  <div className="settings-field-info">
+                    <label className="settings-field-label">Current Password</label>
+                    <span className="settings-field-hint">Verify your identity before updating password</span>
+                  </div>
+                  <div className="settings-field-control" style={{ position: 'relative' }}>
+                    <input
+                      type={showSecCurrent ? 'text' : 'password'}
+                      className="form-input"
+                      style={{ paddingRight: '2.5rem' }}
+                      value={secCurrentPassword}
+                      onChange={(e) => { setSecCurrentPassword(e.target.value); setSecError(''); }}
+                      placeholder="Enter current password"
+                      autoComplete="current-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecCurrent(!showSecCurrent)}
+                      style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    >
+                      {showSecCurrent ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-field-row">
+                  <div className="settings-field-info">
+                    <label className="settings-field-label">New Password</label>
+                    <span className="settings-field-hint">Minimum 8 characters with letters and numbers or symbols</span>
+                  </div>
+                  <div className="settings-field-control" style={{ position: 'relative' }}>
+                    <input
+                      type={showSecNew ? 'text' : 'password'}
+                      className="form-input"
+                      style={{ paddingRight: '2.5rem' }}
+                      value={secNewPassword}
+                      onChange={(e) => { setSecNewPassword(e.target.value); setSecError(''); }}
+                      placeholder="Minimum 8 characters"
+                      autoComplete="new-password"
+                      required
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowSecNew(!showSecNew)}
+                      style={{ position: 'absolute', right: '0.75rem', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)' }}
+                    >
+                      {showSecNew ? <EyeOff size={15} /> : <Eye size={15} />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="settings-field-row">
+                  <div className="settings-field-info">
+                    <label className="settings-field-label">Confirm New Password</label>
+                    <span className="settings-field-hint">Re-enter your new password</span>
+                  </div>
+                  <div className="settings-field-control">
+                    <input
+                      type={showSecNew ? 'text' : 'password'}
+                      className="form-input"
+                      value={secConfirmPassword}
+                      onChange={(e) => { setSecConfirmPassword(e.target.value); setSecError(''); }}
+                      placeholder="Re-enter new password"
+                      autoComplete="new-password"
+                      required
+                    />
+                  </div>
+                </div>
+
+                {/* Password Strength Checklist */}
+                <div style={{
+                  margin: '1.25rem 0',
+                  padding: '0.85rem 1rem',
+                  borderRadius: 'var(--radius-md)',
+                  background: 'var(--bg-surface)',
+                  border: '1px solid var(--border-subtle)',
+                  fontSize: '0.78rem',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: '0.35rem'
+                }}>
+                  <div style={{ fontWeight: 600, color: 'var(--text-accent)', marginBottom: '0.2rem' }}>
+                    Password Requirements:
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: secNewPassword.length >= 8 ? 'var(--success)' : 'var(--text-muted)' }}>
+                    <span>{secNewPassword.length >= 8 ? '✓' : '○'}</span>
+                    <span>At least 8 characters long</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: (/[a-zA-Z]/.test(secNewPassword) && (/[0-9]|[^a-zA-Z0-9]/.test(secNewPassword))) ? 'var(--success)' : 'var(--text-muted)' }}>
+                    <span>{(/[a-zA-Z]/.test(secNewPassword) && (/[0-9]|[^a-zA-Z0-9]/.test(secNewPassword))) ? '✓' : '○'}</span>
+                    <span>Mix of letters and numbers or symbols</span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: (secNewPassword.length > 0 && secNewPassword === secConfirmPassword) ? 'var(--success)' : 'var(--text-muted)' }}>
+                    <span>{(secNewPassword.length > 0 && secNewPassword === secConfirmPassword) ? '✓' : '○'}</span>
+                    <span>Passwords match</span>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginBottom: '1.25rem' }}>
+                  🔒 Security Policy: Changing your password will immediately revoke all previously issued session tokens.
+                </div>
+
+                <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
+                  <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={secLoading || secNewPassword.length < 8 || secNewPassword !== secConfirmPassword}
+                  >
+                    <Save size={15} />
+                    <span>{secLoading ? 'Updating...' : 'Update Password & Revoke Sessions'}</span>
+                  </button>
+                </div>
+              </form>
             </div>
           )}
         </div>

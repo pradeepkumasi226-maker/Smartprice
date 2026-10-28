@@ -332,6 +332,36 @@ export const StoreProvider = ({ children }) => {
     fetchInventory();
   }, []);
 
+  // Automatic recovery when backend becomes reachable again
+  useEffect(() => {
+    if (!isOfflineMode) return;
+
+    let isSubscribed = true;
+    const attemptRecovery = async () => {
+      const isHealthy = await apiService.checkHealth();
+      if (isHealthy && isSubscribed) {
+        console.log('[StoreContext] Backend reachable again, recovering live catalog...');
+        await fetchProducts();
+        await fetchOptimizations({ include_all: true });
+        await fetchInventory();
+      }
+    };
+
+    // Lightweight 15-second health ping while offline
+    const timer = setInterval(attemptRecovery, 15000);
+
+    const handleBrowserOnline = () => {
+      attemptRecovery();
+    };
+    window.addEventListener('online', handleBrowserOnline);
+
+    return () => {
+      isSubscribed = false;
+      clearInterval(timer);
+      window.removeEventListener('online', handleBrowserOnline);
+    };
+  }, [isOfflineMode]);
+
   // Sync optimizations with live product catalog whenever products update
   useEffect(() => {
     if (products.length > 0) {

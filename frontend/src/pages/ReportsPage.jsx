@@ -13,7 +13,8 @@ import {
   Printer,
   Sparkles,
   Package,
-  Layers
+  Layers,
+  AlertTriangle
 } from 'lucide-react';
 import { MetricCard } from '../components/common/MetricCard';
 import { Badge } from '../components/common/Badge';
@@ -40,7 +41,7 @@ import {
 } from 'recharts';
 
 export const ReportsPage = () => {
-  const { sales, products, selectedStore, addToast, navigateTo } = useStore();
+  const { sales, products, selectedStore, addToast, navigateTo, isOfflineMode } = useStore();
   const [dateRange, setDateRange] = useState('ytd');
   const [selectedCategory, setSelectedCategory] = useState('All');
 
@@ -146,6 +147,25 @@ export const ReportsPage = () => {
 
   return (
     <div>
+      {/* Offline Financial Report Mode Alert */}
+      {isOfflineMode && (
+        <div style={{
+          marginBottom: '1.25rem',
+          padding: '0.75rem 1.25rem',
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          color: 'var(--warning)',
+          fontSize: '0.82rem'
+        }}>
+          <AlertTriangle size={16} />
+          <span><strong>Offline Financial Report:</strong> Backend reporting service is unavailable. Financial figures shown reflect cached demonstration dataset, not verified database transactions.</span>
+        </div>
+      )}
+
       {/* Top Header Row with Export Actions */}
       <div className="page-header-row">
         <div>

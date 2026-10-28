@@ -67,7 +67,8 @@ export const DashboardPage = () => {
     toggleProductSelection,
     selectAllProducts,
     clearProductSelection,
-    addToast
+    addToast,
+    isOfflineMode
   } = useStore();
 
   // Filters & Sorting state
@@ -167,6 +168,25 @@ export const DashboardPage = () => {
   return (
     <div>
       {/* Top Banner Explaining SmartPrice System Purpose */}
+      {/* Offline Mode Indicator Banner */}
+      {isOfflineMode && (
+        <div style={{
+          marginBottom: '1.25rem',
+          padding: '0.75rem 1.25rem',
+          background: 'rgba(234, 179, 8, 0.1)',
+          border: '1px solid rgba(234, 179, 8, 0.3)',
+          borderRadius: 'var(--radius-md)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '0.6rem',
+          color: 'var(--warning)',
+          fontSize: '0.82rem'
+        }}>
+          <AlertTriangle size={16} />
+          <span><strong>Offline Mode:</strong> Backend service is unreachable. Financial sales figures and metrics shown are cached demonstration benchmarks, not live database transactions.</span>
+        </div>
+      )}
+
       <AlertBanner
         title={`SmartPrice AI Retail Decision-Support System (${pendingOptimizations.length} Pricing Opportunities)`}
         description="Empirical elasticity modeling, probabilistic demand forecasting, inventory reorder intelligence, and explainable AI (SHAP) for retail pricing managers."

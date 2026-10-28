@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 from .config import settings
 from .database import engine, Base
+from .app import models
 from .app.seed.seed_data import seed_database
 from .app.routers import (
     auth_router,
@@ -33,6 +34,9 @@ async def lifespan(app):
             user_cols = [r[1] for r in conn.execute(text("PRAGMA table_info(users)")).fetchall()]
             if "password_hash" not in user_cols:
                 conn.execute(text("ALTER TABLE users ADD COLUMN password_hash VARCHAR(255)"))
+                conn.commit()
+            if "password_changed_at" not in user_cols:
+                conn.execute(text("ALTER TABLE users ADD COLUMN password_changed_at DATETIME"))
                 conn.commit()
     except Exception as e:
         print(f"[Startup Warning] database migration check: {e}")
