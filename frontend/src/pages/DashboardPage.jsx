@@ -151,7 +151,33 @@ export const DashboardPage = () => {
 
   const demandForecastData = useMemo(() => {
     if (liveForecastPoints && liveForecastPoints.length > 0) {
-      return liveForecastPoints;
+      return liveForecastPoints.map(item => {
+        const baseline = Number(item.historical_sales ?? item.baseline ?? 0);
+        const forecastP50 = Number(item.predicted_demand ?? item.forecastP50 ?? 0);
+        const lowerP10 = Number(item.lower_bound ?? item.lowerP10 ?? 0);
+        const upperP90 = Number(item.upper_bound ?? item.upperP90 ?? 0);
+        const promoUplift = item.promo_uplift !== undefined
+          ? Number(item.promo_uplift)
+          : (item.promoUplift !== undefined
+            ? Number(item.promoUplift)
+            : (forecastP50 && lowerP10 ? Math.max(0, Math.round((forecastP50 - lowerP10) * 0.4)) : 0));
+
+        return {
+          ...item,
+          time: item.date || item.time || '',
+          date: item.date || item.time || '',
+          baseline,
+          historical_sales: baseline,
+          forecastP50,
+          predicted_demand: forecastP50,
+          lowerP10,
+          lower_bound: lowerP10,
+          upperP90,
+          upper_bound: upperP90,
+          promoUplift,
+          promo_uplift: promoUplift
+        };
+      });
     }
     return mockDemandTimeline[forecastHorizon] || mockDemandTimeline['7d'];
   }, [liveForecastPoints, forecastHorizon]);

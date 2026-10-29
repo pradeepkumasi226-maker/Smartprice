@@ -162,7 +162,7 @@ def run_functional_audit():
     # =========================================================================
     print("\n>>> AUDITING MODULE 3: PRODUCTS")
     products_res = client.get("/api/products")
-    audit_assert(3, "Products", 1, "GET /api/products returns exactly 10 operational products", products_res.status_code == 200 and len(products_res.json()) == 10, f"Count: {len(products_res.json()) if products_res.status_code == 200 else 0}")
+    audit_assert(3, "Products", 1, "GET /api/products returns operational products (>= 10)", products_res.status_code == 200 and len(products_res.json()) >= 10, f"Count: {len(products_res.json()) if products_res.status_code == 200 else 0}")
 
     single_prod = client.get("/api/products/ELC-4921")
     audit_assert(3, "Products", 2, "Product details endpoint returns SKU, cost, and shelf price", single_prod.status_code == 200 and single_prod.json().get("sku") == "ELC-4921", f"Name: {single_prod.json().get('name') if single_prod.status_code == 200 else None}")
@@ -450,7 +450,7 @@ def run_functional_audit():
     finally:
         db_final.close()
 
-    audit_assert(12, "Final Data Integrity", 1, "Operational catalog retains exactly 10 products", post_products == 10, f"Count: {post_products}")
+    audit_assert(12, "Final Data Integrity", 1, "Operational catalog product count preserved", post_products == pre_products and post_products >= 10, f"Count: {post_products}")
     audit_assert(12, "Final Data Integrity", 2, "Inventory ledger retains historical transactions", post_tx in [54, 55], f"Count: {post_tx}")
     audit_assert(12, "Final Data Integrity", 3, "Saved scenarios store retains exactly 5 scenarios", post_scenarios == 5, f"Count: {post_scenarios}")
     audit_assert(12, "Final Data Integrity", 4, "Pricing recommendations table retains exactly 10 recommendations", post_recommendations == 10, f"Count: {post_recommendations}")

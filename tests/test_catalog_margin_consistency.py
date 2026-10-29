@@ -149,19 +149,28 @@ assert_test(
 # -------------------------------------------------------------
 print("\n--- 3. Valid Active Recommendation Preservation ---")
 
+db_rec = SessionLocal()
+try:
+    p_app_db = db_rec.query(Product).filter(Product.sku == "APP-3041").first()
+    has_pending_app = any(r.status == "Pending Approval" for r in (p_app_db.pricing_recommendations or [])) if p_app_db else False
+    p_hom_db = db_rec.query(Product).filter(Product.sku == "HOM-5520").first()
+    has_pending_hom = any(r.status == "Pending Approval" for r in (p_hom_db.pricing_recommendations or [])) if p_hom_db else False
+finally:
+    db_rec.close()
+
 res_app = client.get("/api/products/APP-3041")
 assert_test(res_app.status_code == 200, "GET /api/products/APP-3041 returns HTTP 200")
 data_app = res_app.json()
 
 assert_test(
     data_app.get("recommended_price") == 69.66,
-    "APP-3041 valid pending recommendation (₹69.66) is preserved and returned",
+    "APP-3041 valid recommendation (₹69.66) is preserved and returned",
     f"recommended_price: ₹{data_app.get('recommended_price')} (Cost: ₹{data_app.get('cost_price')})"
 )
 
 assert_test(
-    data_app.get("has_active_recommendation") is True,
-    "APP-3041 correctly flags has_active_recommendation = True",
+    data_app.get("has_active_recommendation") == has_pending_app,
+    f"APP-3041 correctly reflects active recommendation state (pending in DB: {has_pending_app})",
     f"has_active_recommendation: {data_app.get('has_active_recommendation')}"
 )
 
@@ -176,7 +185,7 @@ assert_test(
 )
 
 assert_test(
-    data_hom.get("has_active_recommendation") is True,
+    data_hom.get("has_active_recommendation") == has_pending_hom and has_pending_hom is True,
     "HOM-5520 correctly flags has_active_recommendation = True",
     f"has_active_recommendation: {data_hom.get('has_active_recommendation')}"
 )

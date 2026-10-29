@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   ResponsiveContainer,
   ComposedChart,
@@ -24,15 +24,48 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
     forecastP50: false
   });
 
+  const chartData = useMemo(() => {
+    if (!data || !Array.isArray(data)) return [];
+    return data.map(item => {
+      const time = item.time || item.date || '';
+      const baseline = Number(item.baseline ?? item.historical_sales ?? 0);
+      const forecastP50 = Number(item.forecastP50 ?? item.predicted_demand ?? 0);
+      const lowerP10 = Number(item.lowerP10 ?? item.lower_bound ?? 0);
+      const upperP90 = Number(item.upperP90 ?? item.upper_bound ?? 0);
+      const promoUplift = item.promoUplift !== undefined
+        ? Number(item.promoUplift)
+        : (item.promo_uplift !== undefined
+          ? Number(item.promo_uplift)
+          : (forecastP50 && lowerP10 ? Math.max(0, Math.round((forecastP50 - lowerP10) * 0.4)) : 0));
+
+      return {
+        ...item,
+        time,
+        date: item.date || item.time || '',
+        baseline,
+        historical_sales: baseline,
+        forecastP50,
+        predicted_demand: forecastP50,
+        lowerP10,
+        lower_bound: lowerP10,
+        upperP90,
+        upper_bound: upperP90,
+        promoUplift,
+        promo_uplift: promoUplift
+      };
+    });
+  }, [data]);
+
   const toggleSeries = (dataKey) => {
     setHiddenSeries(prev => ({ ...prev, [dataKey]: !prev[dataKey] }));
   };
 
   const handleExportCsv = () => {
-    if (!data || data.length === 0) return;
+    const exportData = chartData && chartData.length > 0 ? chartData : data;
+    if (!exportData || exportData.length === 0) return;
     const header = 'Time,Historical Baseline,Projected Demand (P50),Lower P10,Upper P90,Promotional Surge,Actual Revenue (INR),Projected Revenue (INR)\n';
-    const rows = data.map(d =>
-      `"${d.time}",${d.baseline || d.historical_sales || 0},${d.forecastP50 || d.predicted_demand || 0},${d.lowerP10 || d.lower_bound || 0},${d.upperP90 || d.upper_bound || 0},${d.promoUplift || 0},${d.actual_revenue || 0},${d.projected_revenue || 0}`
+    const rows = exportData.map(d =>
+      `"${d.time || d.date || ''}",${d.baseline ?? d.historical_sales ?? 0},${d.forecastP50 ?? d.predicted_demand ?? 0},${d.lowerP10 ?? d.lower_bound ?? 0},${d.upperP90 ?? d.upper_bound ?? 0},${d.promoUplift ?? d.promo_uplift ?? 0},${d.actual_revenue || 0},${d.projected_revenue || 0}`
     ).join('\n');
 
     const blob = new Blob([header + rows], { type: 'text/csv;charset=utf-8;' });
@@ -47,8 +80,8 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const p50 = payload.find(p => p.dataKey === 'forecastP50');
-      const base = payload.find(p => p.dataKey === 'baseline');
+      const p50 = payload.find(p => p.dataKey === 'forecastP50' || p.dataKey === 'predicted_demand');
+      const base = payload.find(p => p.dataKey === 'baseline' || p.dataKey === 'historical_sales');
       const currentPoint = payload[0]?.payload || {};
       let delta = null;
       if (p50 && base && p50.value !== undefined && base.value !== undefined) {
@@ -120,9 +153,9 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
         </button>
       </div>
 
-      <div className="chart-wrapper" style={{ height: showBrush ? height + 40 : height }}>
-        <ResponsiveContainer width="100%" height="100%">
-          <ComposedChart data={data} margin={{ top: 10, right: 10, left: -20, bottom: showBrush ? 10 : 0 }}>
+      <div className="chart-wrapper" style={{ height: showBrush ? height + 40 : height, minHeight: showBrush ? height + 40 : height }}>
+        <ResponsiveContainer width="100%" height="100%" minHeight={height}>
+          <ComposedChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: showBrush ? 10 : 0 }}>
             <defs>
               <linearGradient id="confidenceBandGrad" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="0%" stopColor="#10B981" stopOpacity={0.25} />
@@ -162,6 +195,7 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
                 strokeDasharray="2 2"
                 fill="#10B981"
                 fillOpacity={0.12}
+                connectNulls
               />
             )}
 
@@ -174,6 +208,7 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
                 strokeWidth={1.5}
                 strokeDasharray="3 3"
                 dot={false}
+                connectNulls
               />
             )}
 
@@ -196,6 +231,7 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
                 strokeWidth={2}
                 strokeDasharray="4 4"
                 dot={false}
+                connectNulls
               />
             )}
 
@@ -207,6 +243,7 @@ export const DemandForecastChart = ({ data, height = 320 }) => {
                 stroke="#10B981"
                 strokeWidth={3}
                 dot={{ r: 4, fill: '#10B981' }}
+                connectNulls
               />
             )}
 

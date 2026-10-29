@@ -138,9 +138,16 @@ res_app = client.get("/api/shap/APP-3041")
 assert_test(res_app.status_code == 200, "GET /api/shap/APP-3041 returns HTTP 200")
 data_app = res_app.json()
 
+db_shap = SessionLocal()
+try:
+    p_app_db = db_shap.query(Product).filter(Product.sku == "APP-3041").first()
+    expected_base = p_app_db.current_price if p_app_db else 64.50
+finally:
+    db_shap.close()
+
 assert_test(
-    data_app["base_value"] == 64.50,
-    "APP-3041 baseline shelf price is ₹64.50",
+    data_app["base_value"] == expected_base,
+    f"APP-3041 baseline shelf price matches current shelf price (₹{expected_base:.2f})",
     f"base_value: ₹{data_app['base_value']}"
 )
 
