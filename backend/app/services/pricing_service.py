@@ -70,6 +70,10 @@ class PricingService:
         min_margin_pct = 5.0 if raw_margin is None else float(raw_margin)
         max_price_change_pct = float(guardrails.get("max_price_change_pct", 30.0))
         allow_below_cost = bool(guardrails.get("allow_below_cost", False))
+        raw_buffer = guardrails.get("competitor_buffer_pct", 3.5)
+        competitor_buffer_pct = 3.5 if raw_buffer is None else float(raw_buffer)
+        if competitor_buffer_pct < 0.0 or competitor_buffer_pct > 50.0:
+            raise ValueError("Competitor match buffer percentage must be between 0.0 and 50.0")
 
         current_p = round(product.current_price, 2)
         cost_p = round(product.cost_price, 2)
@@ -154,10 +158,13 @@ class PricingService:
                 p_pct = (candidate_p - current_p) / current_p if current_p > 0 else 0
                 comp_adj = 0.0
                 if comp_p > 0:
-                    if candidate_p > comp_p * 1.05 and elasticity < -1.0:
+                    comp_ratio = competitor_buffer_pct / 100.0
+                    if candidate_p > comp_p * (1.0 + comp_ratio) and elasticity < -1.0:
                         comp_adj = -0.04
-                    elif candidate_p <= comp_p and elasticity < -1.0:
+                    elif candidate_p <= comp_p * (1.0 - comp_ratio) and elasticity < -1.0:
                         comp_adj = 0.03
+                    elif candidate_p <= comp_p and elasticity < -1.0:
+                        comp_adj = 0.015
 
                 d_mult = 1.0 + (elasticity * p_pct) + scarcity_pressure + comp_adj
                 d = max(10, round(base_d * d_mult))
@@ -269,6 +276,7 @@ class PricingService:
             "inventory_factor": inv_factor_text,
             "competitor_price": comp_p,
             "competitor_gap": round(comp_p - current_p, 2) if comp_p > 0 else 0.0,
+            "competitor_buffer_pct": competitor_buffer_pct,
             "cost_floor": cost_floor,
             "min_guardrail": min_guardrail,
             "max_guardrail": max_guardrail,

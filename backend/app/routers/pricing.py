@@ -23,6 +23,7 @@ def get_pricing_recommendations(
     include_all: bool = Query(False, description="Whether to include recommendations for all products in catalog"),
     min_margin_pct: Optional[float] = Query(None, description="Minimum margin guardrail percentage"),
     max_price_change_pct: Optional[float] = Query(None, description="Maximum price shift percentage"),
+    competitor_buffer_pct: Optional[float] = Query(None, description="Competitor match buffer percentage"),
     allow_below_cost: Optional[bool] = Query(False, description="Explicit rule to allow selling below cost"),
     db: Session = Depends(get_db)
 ):
@@ -31,6 +32,8 @@ def get_pricing_recommendations(
         guardrails["min_margin_pct"] = min_margin_pct
     if max_price_change_pct is not None:
         guardrails["max_price_change_pct"] = max_price_change_pct
+    if competitor_buffer_pct is not None:
+        guardrails["competitor_buffer_pct"] = competitor_buffer_pct
     if allow_below_cost is not None:
         guardrails["allow_below_cost"] = allow_below_cost
 
@@ -59,6 +62,7 @@ def generate_pricing_recommendations(
         guardrails = {
             "min_margin_pct": payload.min_margin_pct if payload.min_margin_pct is not None else 5.0,
             "max_price_change_pct": payload.max_price_change_pct if payload.max_price_change_pct is not None else 30.0,
+            "competitor_buffer_pct": payload.competitor_buffer_pct if payload.competitor_buffer_pct is not None else 3.5,
             "allow_below_cost": payload.allow_below_cost or False
         }
         return PricingService.generate_all_recommendations(db, guardrails=guardrails)
@@ -144,6 +148,7 @@ def recalculate_pricing_recommendation(
             guardrails = {
                 "min_margin_pct": payload.min_margin_pct if payload.min_margin_pct is not None else 5.0,
                 "max_price_change_pct": payload.max_price_change_pct if payload.max_price_change_pct is not None else 30.0,
+                "competitor_buffer_pct": payload.competitor_buffer_pct if payload.competitor_buffer_pct is not None else 3.5,
                 "allow_below_cost": payload.allow_below_cost or False
             }
         return PricingService.recalculate_recommendation(db=db, sku_or_id=sku, guardrails=guardrails)

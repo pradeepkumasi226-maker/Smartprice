@@ -339,11 +339,11 @@ export const DemandForecastPage = () => {
           iconBg={forecastError ? "rgba(100, 116, 139, 0.12)" : "rgba(16, 185, 129, 0.12)"}
         />
         <MetricCard
-          title="Confidence Score (P50)"
-          value={forecastError ? "Unavailable" : "95.8%"}
-          subvalue={forecastError ? "Model validation offline" : (forecastMeta.accuracy_metric || "MAE: ±3.8%, R²: 0.94")}
-          trend={forecastError ? "neutral" : "up"}
-          trendValue={forecastError ? "Offline" : "High Accuracy"}
+          title="Model Validation Error (WAPE)"
+          value={forecastError ? "Unavailable" : (forecastMeta.accuracy_metric?.match(/WAPE:\s*([0-9.]+%)/i)?.[1] || "48.1%")}
+          subvalue={forecastError ? "Model validation offline" : (forecastMeta.accuracy_metric || "Validation MAE: 31.3 units")}
+          trend={forecastError ? "neutral" : "neutral"}
+          trendValue={forecastError ? "Offline" : "Backtested"}
           icon={Sparkles}
           iconColor={forecastError ? "var(--text-muted)" : "#6366F1"}
           iconBg={forecastError ? "rgba(100, 116, 139, 0.12)" : "rgba(99, 102, 241, 0.12)"}
@@ -353,7 +353,7 @@ export const DemandForecastPage = () => {
           value={forecastError ? "Unavailable" : `+${promoUpliftUnits.toLocaleString()} units`}
           subvalue={forecastError ? "Lift estimation offline" : "Weekend & flash event lift"}
           trend={forecastError ? "neutral" : "up"}
-          trendValue={forecastError ? "--" : "+18.5%"}
+          trendValue={forecastError ? "--" : (totalForecastVolume > 0 ? `+${((promoUpliftUnits / totalForecastVolume) * 100).toFixed(1)}%` : '+0.0%')}
           icon={Zap}
           iconColor={forecastError ? "var(--text-muted)" : "#F59E0B"}
           iconBg={forecastError ? "rgba(100, 116, 139, 0.12)" : "rgba(245, 158, 11, 0.12)"}

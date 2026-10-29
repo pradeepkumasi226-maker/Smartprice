@@ -214,10 +214,12 @@ export const StoreProvider = ({ children }) => {
     } catch (e) {
       console.error('Failed to save smartprice_settings to localStorage:', e);
     }
-    if (newSettings.minMargin !== undefined) {
+    if (newSettings.minMargin !== undefined || newSettings.competitorMatchBuffer !== undefined) {
+      const marginVal = newSettings.minMargin !== undefined ? Number(newSettings.minMargin) : Number(settings?.minMargin ?? 25);
+      const bufferVal = newSettings.competitorMatchBuffer !== undefined ? Number(newSettings.competitorMatchBuffer) : Number(settings?.competitorMatchBuffer ?? 3.5);
       await Promise.all([
-        fetchProducts({ min_margin_pct: Number(newSettings.minMargin) }),
-        fetchOptimizations({ include_all: true, min_margin_pct: Number(newSettings.minMargin) })
+        fetchProducts({ min_margin_pct: marginVal }),
+        fetchOptimizations({ include_all: true, min_margin_pct: marginVal, competitor_buffer_pct: bufferVal })
       ]);
     }
     return updated;
@@ -229,8 +231,12 @@ export const StoreProvider = ({ children }) => {
       const activeMargin = options.min_margin_pct !== undefined
         ? Number(options.min_margin_pct)
         : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const activeBuffer = options.competitor_buffer_pct !== undefined
+        ? Number(options.competitor_buffer_pct)
+        : (settings?.competitorMatchBuffer !== undefined ? Number(settings.competitorMatchBuffer) : 3.5);
       const mergedOptions = {
         min_margin_pct: activeMargin,
+        competitor_buffer_pct: activeBuffer,
         ...options
       };
       const data = await apiService.getOptimizations(mergedOptions);
@@ -300,8 +306,12 @@ export const StoreProvider = ({ children }) => {
       const activeMargin = guardrails.min_margin_pct !== undefined
         ? Number(guardrails.min_margin_pct)
         : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const activeBuffer = guardrails.competitor_buffer_pct !== undefined
+        ? Number(guardrails.competitor_buffer_pct)
+        : (settings?.competitorMatchBuffer !== undefined ? Number(settings.competitorMatchBuffer) : 3.5);
       const mergedGuardrails = {
         min_margin_pct: activeMargin,
+        competitor_buffer_pct: activeBuffer,
         ...guardrails
       };
       const data = await apiService.generateRecommendations(mergedGuardrails);
@@ -1158,7 +1168,18 @@ export const StoreProvider = ({ children }) => {
     if (!opt || !opt.sku) return;
 
     try {
-      const res = await apiService.recalculateRecommendation(opt.sku, guardrails);
+      const activeMargin = guardrails?.min_margin_pct !== undefined
+        ? Number(guardrails.min_margin_pct)
+        : (settings?.minMargin !== undefined ? Number(settings.minMargin) : 25);
+      const activeBuffer = guardrails?.competitor_buffer_pct !== undefined
+        ? Number(guardrails.competitor_buffer_pct)
+        : (settings?.competitorMatchBuffer !== undefined ? Number(settings.competitorMatchBuffer) : 3.5);
+      const mergedGuardrails = {
+        min_margin_pct: activeMargin,
+        competitor_buffer_pct: activeBuffer,
+        ...(guardrails || {})
+      };
+      const res = await apiService.recalculateRecommendation(opt.sku, mergedGuardrails);
       if (res && res.success) {
         await fetchOptimizations({ include_all: true });
         addToast(

@@ -504,6 +504,7 @@ export const apiService = {
     if (includeAll) query.append('include_all', 'true');
     if (options.min_margin_pct !== undefined) query.append('min_margin_pct', options.min_margin_pct);
     if (options.max_price_change_pct !== undefined) query.append('max_price_change_pct', options.max_price_change_pct);
+    if (options.competitor_buffer_pct !== undefined) query.append('competitor_buffer_pct', options.competitor_buffer_pct);
     if (options.allow_below_cost !== undefined) query.append('allow_below_cost', options.allow_below_cost);
 
     const queryString = query.toString() ? `?${query.toString()}` : '';
@@ -612,6 +613,8 @@ export const apiService = {
       const data = await resp.json();
       return {
         product: extraOptions.product || { id: data.product_id, sku: data.sku, name: data.product_name },
+        productId: data.product_id,
+        sku: data.sku,
         simulatedPrice: data.simulated_price,
         baselinePrice: data.baseline_price,
         simulatedDemand: data.simulated_demand,

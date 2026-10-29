@@ -79,15 +79,19 @@ assert(
   `Cost: ₹${tvCost} -> Floor: ₹${floorAt25}`
 );
 
-// 3. Verify query string builder propagates min_margin_pct
+// 3. Verify query string builder propagates min_margin_pct and competitor_buffer_pct
 function buildOptimizationsQuery(options, currentSettings) {
   const activeMargin = options.min_margin_pct !== undefined
     ? Number(options.min_margin_pct)
     : (currentSettings?.minMargin !== undefined ? Number(currentSettings.minMargin) : 25);
+  const activeBuffer = options.competitor_buffer_pct !== undefined
+    ? Number(options.competitor_buffer_pct)
+    : (currentSettings?.competitorMatchBuffer !== undefined ? Number(currentSettings.competitorMatchBuffer) : 3.5);
   
   const query = new URLSearchParams();
   query.append('include_all', 'true');
   query.append('min_margin_pct', String(activeMargin));
+  query.append('competitor_buffer_pct', String(activeBuffer));
   if (options.max_price_change_pct !== undefined) {
     query.append('max_price_change_pct', String(options.max_price_change_pct));
   }
@@ -96,20 +100,20 @@ function buildOptimizationsQuery(options, currentSettings) {
 
 const defaultReqUrl = buildOptimizationsQuery({}, parsedSettings);
 assert(
-  defaultReqUrl.includes('min_margin_pct=25'),
-  'Default optimization fetch includes min_margin_pct=25 in query string',
+  defaultReqUrl.includes('min_margin_pct=25') && defaultReqUrl.includes('competitor_buffer_pct=3.5'),
+  'Default optimization fetch includes min_margin_pct=25 and competitor_buffer_pct=3.5 in query string',
   `URL: ${defaultReqUrl}`
 );
 
 // 4. Verify setting change propagation
-// User updates minMargin to 30% in Settings
-const updatedSettings = { ...parsedSettings, minMargin: 30 };
+// User updates minMargin to 30% and competitorMatchBuffer to 5.0% in Settings
+const updatedSettings = { ...parsedSettings, minMargin: 30, competitorMatchBuffer: 5.0 };
 globalLocalStorage.setItem('smartprice_settings', JSON.stringify(updatedSettings));
 
 const subsequentReqUrl = buildOptimizationsQuery({}, updatedSettings);
 assert(
-  subsequentReqUrl.includes('min_margin_pct=30'),
-  'Updating setting to 30% propagates to subsequent API requests',
+  subsequentReqUrl.includes('min_margin_pct=30') && subsequentReqUrl.includes('competitor_buffer_pct=5'),
+  'Updating setting to 30% and competitor buffer to 5.0% propagates to subsequent API requests',
   `URL: ${subsequentReqUrl}`
 );
 

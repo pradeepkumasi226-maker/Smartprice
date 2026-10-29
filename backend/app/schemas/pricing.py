@@ -57,6 +57,7 @@ class PricingRecommendationResponse(BaseModel):
 class PricingEngineGenerateRequest(BaseModel):
     min_margin_pct: Optional[float] = 5.0
     max_price_change_pct: Optional[float] = 30.0
+    competitor_buffer_pct: Optional[float] = 3.5
     allow_below_cost: Optional[bool] = False
     category: Optional[str] = None
 

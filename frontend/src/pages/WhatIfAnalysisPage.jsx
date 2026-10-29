@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Sliders,
   TrendingUp,
@@ -66,12 +66,12 @@ export const WhatIfAnalysisPage = () => {
   
   // Persisted or parameter-based product ID
   const [selectedProductId, setSelectedProductId] = useState(() => {
+    if (pageParams?.productId) return pageParams.productId;
     try {
       const stored = localStorage.getItem('smartprice_selected_whatif_product_id');
-      if (pageParams?.productId) return pageParams.productId;
-      if (stored && safeProducts.some(p => p.id === stored || p.sku === stored)) return stored;
+      if (stored) return stored;
     } catch (e) {}
-    return pageParams?.productId || safeProducts[0]?.id || '';
+    return safeProducts[0]?.id || '';
   });
 
   // Find target product with SKU and ID match support
@@ -82,7 +82,14 @@ export const WhatIfAnalysisPage = () => {
   }, [safeProducts, selectedProductId]);
 
   const [simulatedPrice, setSimulatedPrice] = useState(() => {
-    const p = safeProducts.find(prod => prod.id === (pageParams?.productId || safeProducts[0]?.id) || prod.sku === pageParams?.productId) || safeProducts[0];
+    const targetId = pageParams?.productId || (() => {
+      try {
+        const stored = localStorage.getItem('smartprice_selected_whatif_product_id');
+        if (stored) return stored;
+      } catch (e) {}
+      return '';
+    })() || safeProducts[0]?.id || '';
+    const p = safeProducts.find(prod => prod.id === targetId || prod.sku === targetId) || safeProducts[0];
     const initialPrice = Number(p?.currentPrice ?? p?.current_price ?? 100);
     return initialPrice > 0 ? initialPrice : 100;
   });
@@ -94,20 +101,27 @@ export const WhatIfAnalysisPage = () => {
   const [isSimulating, setIsSimulating] = useState(false);
   const [simulationError, setSimulationError] = useState(null);
 
+  // Track product ID currently represented in simulator state
+  const activeProductIdRef = useRef(selectedProduct?.id || null);
+
   // Debounced live simulation with backend API
   useEffect(() => {
     if (!selectedProduct) return;
     let isCancelled = false;
+    const reqSku = selectedProduct.sku;
+    const reqId = selectedProduct.id;
+    const reqPrice = simulatedPrice;
+
     const timer = setTimeout(async () => {
       try {
         setIsSimulating(true);
         setSimulationError(null);
         const result = await apiService.simulateWhatIf(
-          selectedProduct.sku || selectedProduct.id,
-          simulatedPrice,
+          reqSku || reqId,
+          reqPrice,
           {
-            productId: selectedProduct.id,
-            sku: selectedProduct.sku,
+            productId: reqId,
+            sku: reqSku,
             competitorOffset,
             elasticityMultiplier,
             promoDiscount,
@@ -115,7 +129,12 @@ export const WhatIfAnalysisPage = () => {
           }
         );
         if (!isCancelled && result) {
-          setLiveSimulation(result);
+          // Strictly drop delayed asynchronous responses from previous products
+          const isMatching = (result.sku && reqSku && result.sku.toLowerCase() === reqSku.toLowerCase()) ||
+                             (result.productId && reqId && result.productId === reqId);
+          if (isMatching) {
+            setLiveSimulation(result);
+          }
         }
       } catch (err) {
         if (!isCancelled) {
@@ -135,15 +154,32 @@ export const WhatIfAnalysisPage = () => {
     };
   }, [selectedProduct, simulatedPrice, competitorOffset, elasticityMultiplier, promoDiscount]);
 
-  // Sync when product changes or initial param arrives
+  // Synchronize simulated price and reset controls when switching products or when safeProducts loads
   useEffect(() => {
-    if (pageParams?.productId) {
+    if (!selectedProduct) return;
+
+    if (activeProductIdRef.current !== selectedProduct.id) {
+      activeProductIdRef.current = selectedProduct.id;
+      const baseP = Number(selectedProduct.currentPrice ?? selectedProduct.current_price ?? 100);
+      setSimulatedPrice(baseP > 0 ? baseP : 100);
+      setCompetitorOffset(0);
+      setElasticityMultiplier(1.0);
+      setPromoDiscount(0);
+      setLiveSimulation(null);
+    }
+  }, [selectedProduct]);
+
+  // Sync if pageParams changes or catalog fallback occurs
+  useEffect(() => {
+    if (pageParams?.productId && pageParams.productId !== selectedProductId) {
       setSelectedProductId(pageParams.productId);
+      setLiveSimulation(null);
       try {
         localStorage.setItem('smartprice_selected_whatif_product_id', pageParams.productId);
       } catch (e) {}
       const target = safeProducts.find(p => p.id === pageParams.productId || p.sku === pageParams.productId);
       if (target) {
+        activeProductIdRef.current = target.id;
         const pVal = Number(target.currentPrice ?? target.current_price ?? 100);
         setSimulatedPrice(pVal > 0 ? pVal : 100);
         setCompetitorOffset(0);
@@ -151,20 +187,24 @@ export const WhatIfAnalysisPage = () => {
         setPromoDiscount(0);
       }
     } else if (safeProducts.length > 0 && (!selectedProductId || !safeProducts.some(p => p.id === selectedProductId || p.sku === selectedProductId))) {
-      const fallbackId = safeProducts[0].id;
-      setSelectedProductId(fallbackId);
-      const pVal = Number(safeProducts[0].currentPrice ?? safeProducts[0].current_price ?? 100);
+      const fallback = safeProducts[0];
+      setSelectedProductId(fallback.id);
+      activeProductIdRef.current = fallback.id;
+      const pVal = Number(fallback.currentPrice ?? fallback.current_price ?? 100);
       setSimulatedPrice(pVal > 0 ? pVal : 100);
+      setLiveSimulation(null);
     }
-  }, [pageParams, safeProducts]);
+  }, [pageParams, safeProducts, selectedProductId]);
 
   const handleProductSelect = (id) => {
     setSelectedProductId(id);
+    setLiveSimulation(null);
     try {
       localStorage.setItem('smartprice_selected_whatif_product_id', id);
     } catch (e) {}
     const target = safeProducts.find(p => p.id === id || p.sku === id);
     if (target) {
+      activeProductIdRef.current = target.id;
       const pVal = Number(target.currentPrice ?? target.current_price ?? 100);
       setSimulatedPrice(pVal > 0 ? pVal : 100);
       setCompetitorOffset(0);
@@ -248,7 +288,15 @@ export const WhatIfAnalysisPage = () => {
       };
     }
 
-    if (liveSimulation) {
+    const isLiveMatch = Boolean(
+      liveSimulation &&
+      (
+        (liveSimulation.sku && selectedProduct.sku && liveSimulation.sku.toLowerCase() === selectedProduct.sku.toLowerCase()) ||
+        (liveSimulation.productId && selectedProduct.id && liveSimulation.productId === selectedProduct.id)
+      )
+    );
+
+    if (isLiveMatch) {
       return {
         product: selectedProduct,
         simulatedPrice: liveSimulation.simulatedPrice,
@@ -393,12 +441,30 @@ export const WhatIfAnalysisPage = () => {
   };
 
   const loadScenarioIntoSimulator = (scenario) => {
-    setSelectedProductId(scenario.productId || scenario.product_id);
-    setSimulatedPrice(scenario.simulatedPrice || scenario.simulated_price);
+    const targetId = scenario.productId || scenario.product_id;
+    setSelectedProductId(targetId);
+    setLiveSimulation(null);
+    try {
+      localStorage.setItem('smartprice_selected_whatif_product_id', targetId);
+    } catch (e) {}
+    activeProductIdRef.current = targetId;
+    const sPrice = Number(scenario.simulatedPrice || scenario.simulated_price);
+    if (sPrice > 0) {
+      setSimulatedPrice(sPrice);
+    } else {
+      const target = safeProducts.find(p => p.id === targetId || p.sku === targetId);
+      if (target) {
+        const pVal = Number(target.currentPrice ?? target.current_price ?? 100);
+        setSimulatedPrice(pVal > 0 ? pVal : 100);
+      }
+    }
+    setCompetitorOffset(0);
+    setElasticityMultiplier(1.0);
+    setPromoDiscount(0);
     setActiveTab('simulator');
     addToast(
       "Scenario Loaded",
-      `Loaded "${scenario.name}" (${formatCurrency(scenario.simulatedPrice || scenario.simulated_price)}) into simulator.`,
+      `Loaded "${scenario.name}" (${formatCurrency(sPrice || 100)}) into simulator.`,
       "info"
     );
   };
