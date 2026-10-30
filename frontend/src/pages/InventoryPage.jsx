@@ -304,8 +304,8 @@ export const InventoryPage = () => {
         />
         <MetricCard
           title="Warehouse Stock Valuation"
-          value={formatCurrency(inventoryMetrics.warehouseValuation, { decimals: 0 })}
-          subvalue="Wholesale Cost: ₹90,984 • Retail Potential: ₹199,607"
+          value={formatCurrency(inventoryMetrics.wholesaleCostValuation ?? inventoryMetrics.warehouseValuation, { decimals: 0 })}
+          subvalue={`Wholesale Cost: ${formatCurrency(inventoryMetrics.wholesaleCostValuation ?? inventoryMetrics.warehouseValuation, { decimals: 0 })} • Retail Potential: ${formatCurrency(inventoryMetrics.retailPotentialValuation ?? 0, { decimals: 0 })}`}
           trend="up"
           trendValue="+4.2%"
           icon={Truck}

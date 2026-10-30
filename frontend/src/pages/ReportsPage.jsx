@@ -27,7 +27,8 @@ import {
   calculateSalesMetrics,
   calculateMonthlySalesTrends,
   calculateCategoryPerformance,
-  reconcileFinancialMetrics
+  reconcileFinancialMetrics,
+  CANONICAL_CATEGORIES
 } from '../utils/analytics';
 import {
   ResponsiveContainer,
@@ -80,11 +81,10 @@ export const ReportsPage = () => {
     return () => { isCancelled = true; };
   }, [isOfflineMode, retryCount]);
 
-  // Dynamically derive category options from sales data ensuring all departments (e.g. Sports & Outdoors) are included
+  // Derive category options strictly from canonical catalog taxonomy
   const availableCategories = useMemo(() => {
-    const cats = Array.from(new Set(sales.map(s => s.category).filter(Boolean))).sort();
-    return ['All', ...cats];
-  }, [sales]);
+    return ['All', ...CANONICAL_CATEGORIES];
+  }, []);
 
   // Filter sales dynamically based on selected dateRange, category, and store
   const filteredSales = useMemo(() => {
@@ -273,7 +273,7 @@ export const ReportsPage = () => {
             )}
           </h2>
           <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-            Financial audit {liveReport && isDefaultScope ? 'verified directly against live SQLite database transaction ledger' : `computed from ${filteredSales.length} transaction records with revenue, cost, profit, and unit velocity`}.
+            Financial audit {liveReport && isDefaultScope ? `verified directly against live SQLite database transaction ledger (${liveReport.total_sales_transactions || 160} transactions, ${liveReport.date_start || '2026-01-15'} to ${liveReport.date_end || '2026-08-18'})` : `computed from ${filteredSales.length} demonstration transaction records (${dateRange.toUpperCase()})`}.
           </p>
         </div>
 
@@ -391,7 +391,7 @@ export const ReportsPage = () => {
         <MetricCard
           title="Units Sold & Avg Price"
           value={`${effectiveMetrics.totalUnitsSold.toLocaleString()} units`}
-          subvalue={`Average price: ${formatCurrency(effectiveMetrics.averagePrice)}`}
+          subvalue={liveReport && isDefaultScope ? `Average price: ${formatCurrency(effectiveMetrics.averagePrice)} • ${liveReport.total_sales_transactions || 160} txs` : `Average price: ${formatCurrency(effectiveMetrics.averagePrice)} • ${filteredSales.length} txs`}
           trend="up"
           trendValue="High Velocity"
           icon={CheckCircle}
@@ -406,10 +406,12 @@ export const ReportsPage = () => {
           <div>
             <h3 style={{ fontSize: '1.15rem', fontWeight: 700 }}>Monthly Revenue vs Gross Margin (%)</h3>
             <p style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-              Historical correlation between dynamic pricing optimization and gross margin health ({dateRange.toUpperCase()})
+              {liveReport && isDefaultScope ? 'Demonstration sample monthly trend profile (160 verified historical transactions aggregated in headline totals)' : `Historical correlation between dynamic pricing optimization and gross margin health (${dateRange.toUpperCase()})`}
             </p>
           </div>
-          <Badge variant="purple">Transactions Analyzed: {filteredSales.length}</Badge>
+          <Badge variant="purple">
+            {liveReport && isDefaultScope ? `Live Ledger: ${liveReport.total_sales_transactions || 160} txs • Sample Trajectory: ${filteredSales.length} txs` : `Demonstration Data: ${filteredSales.length} txs`}
+          </Badge>
         </div>
 
         <div className="chart-wrapper" style={{ height: 300 }}>

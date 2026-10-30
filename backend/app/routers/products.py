@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status as http_status, Query
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from ...database import get_db
@@ -20,16 +20,16 @@ PRODUCT_DELETE_ROLES = ["Store Operations Director", "Admin"]
 def get_products(
     search: Optional[str] = Query(None, description="Search by name, SKU or category"),
     category: Optional[str] = Query(None, description="Filter by category"),
-    status: Optional[str] = Query(None, description="Filter by stock status"),
+    stock_status: Optional[str] = Query(None, alias="status", description="Filter by stock status"),
     min_margin_pct: Optional[float] = Query(None, description="Configured minimum gross margin percentage"),
     db: Session = Depends(get_db)
 ):
     try:
         return ProductService.get_products(
-            db, search=search, category=category, status=status, min_margin_pct=min_margin_pct
+            db, search=search, category=category, status=stock_status, min_margin_pct=min_margin_pct
         )
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.post("/batch-delete")
 def batch_delete_products(
@@ -54,7 +54,7 @@ def get_product_pricing_decisions(sku: str, db: Session = Depends(get_db)):
     """Inspect complete historical pricing decisions and executive overrides for a product."""
     product = db.query(Product).filter(or_(Product.sku == sku, Product.id == sku)).first()
     if not product:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
     decisions = (
         db.query(PricingDecision)
         .filter(PricingDecision.product_id == product.id)
@@ -84,18 +84,21 @@ def get_product(
     try:
         product = ProductService.get_product_by_sku(db, sku, min_margin_pct=min_margin_pct)
         if not product:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
         return product
     except ValueError as e:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
 
-@router.post("", response_model=ProductResponse, status_code=status.HTTP_201_CREATED)
+@router.post("", response_model=ProductResponse, status_code=http_status.HTTP_201_CREATED)
 def create_product(
     payload: ProductCreate,
     current_user: User = Depends(require_role(PRODUCT_EDIT_ROLES)),
     db: Session = Depends(get_db)
 ):
-    return ProductService.create_product(db, payload)
+    try:
+        return ProductService.create_product(db, payload)
+    except ValueError as e:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.put("/{sku}", response_model=ProductResponse)
 def update_product(
@@ -104,10 +107,13 @@ def update_product(
     current_user: User = Depends(require_role(PRODUCT_EDIT_ROLES)),
     db: Session = Depends(get_db)
 ):
-    updated = ProductService.update_product(db, sku, payload)
-    if not updated:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
-    return updated
+    try:
+        updated = ProductService.update_product(db, sku, payload)
+        if not updated:
+            raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
+        return updated
+    except ValueError as e:
+        raise HTTPException(status_code=http_status.HTTP_400_BAD_REQUEST, detail=str(e))
 
 @router.delete("/{sku}")
 def delete_product(
@@ -117,5 +123,5 @@ def delete_product(
 ):
     deleted = ProductService.delete_product(db, sku)
     if not deleted:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
+        raise HTTPException(status_code=http_status.HTTP_404_NOT_FOUND, detail=f"Product with SKU or ID '{sku}' not found.")
     return {"success": True, "message": f"Product '{sku}' deleted successfully."}

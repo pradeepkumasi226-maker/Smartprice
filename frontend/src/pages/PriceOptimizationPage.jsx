@@ -737,7 +737,7 @@ export const PriceOptimizationPage = () => {
                             {formatCurrency(opt.recommendedPrice)}
                           </div>
                           <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)' }}>
-                            Cost: {formatCurrency(opt.costPrice)}
+                            {opt.minGuardrail ? `Min Margin Floor: ${formatCurrency(opt.minGuardrail)} • ` : ''}Cost: {formatCurrency(opt.costPrice)}
                           </div>
                         </td>
                         <td>
@@ -923,7 +923,7 @@ export const PriceOptimizationPage = () => {
                       <strong style={{ fontFamily: 'var(--font-mono)' }}>{formatCurrency(costP)}</strong>
                     </div>
                     <div>
-                      <span style={{ color: 'var(--text-muted)' }}>Min Margin Floor: </span>
+                      <span style={{ color: 'var(--text-muted)' }} title="Minimum boundary to satisfy configured gross margin target">Min Margin Floor: </span>
                       <strong style={{ fontFamily: 'var(--font-mono)', color: 'var(--warning)' }}>{formatCurrency(minGuardrail)}</strong>
                     </div>
                     <div>
@@ -944,7 +944,7 @@ export const PriceOptimizationPage = () => {
                       Empirical Profit vs Price Elasticity Curve
                     </span>
                     <span style={{ fontSize: '0.72rem', color: 'var(--success)', fontWeight: 600 }}>
-                      ● Optimal Target: {formatCurrency(recP)}
+                      ● AI Recommended Optimal Target: {formatCurrency(recP)}
                     </span>
                   </div>
                   <ElasticityCurveChart data={curveData} height={190} />
@@ -962,6 +962,13 @@ export const PriceOptimizationPage = () => {
                   <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', lineHeight: 1.5, marginBottom: '0.75rem' }}>
                     {selectedOpt.rationale}
                   </p>
+
+                  {selectedOpt.minGuardrail && selectedOpt.recommendedPrice !== selectedOpt.minGuardrail && (
+                    <div style={{ marginTop: '0.5rem', marginBottom: '0.75rem', padding: '0.5rem 0.75rem', background: 'rgba(245, 158, 11, 0.08)', borderRadius: 'var(--radius-sm)', border: '1px solid rgba(245, 158, 11, 0.2)', fontSize: '0.75rem', color: 'var(--text-secondary)' }}>
+                      <span style={{ fontWeight: 700, color: 'var(--warning)' }}>Guardrail vs Recommendation: </span>
+                      The minimum margin floor ({formatCurrency(selectedOpt.minGuardrail)}) represents the lowest boundary permitted by business policy. The AI recommended price ({formatCurrency(selectedOpt.recommendedPrice)}) is the optimal target modeled to maximize revenue and profit.
+                    </div>
+                  )}
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '0.5rem', fontSize: '0.76rem', paddingTop: '0.5rem', borderTop: '1px solid rgba(6, 182, 212, 0.15)' }}>
                     <div>

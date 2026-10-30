@@ -64,28 +64,64 @@ class ProductService:
         if below_cost_approved and below_cost_approved.reason:
             override_reason = below_cost_approved.reason
 
-        # 3. Resolve recommended_price
+        # 3. Resolve recommended_price, margin floor, and AI optimal price
         has_active = len(pending_recs) > 0
+        approved_price = None
+        if approved_recs:
+            approved_price = approved_recs[0].recommended_price
+
         if has_active:
             active_rec = pending_recs[0]
-            rec_val = active_rec.recommended_price
-            if rec_val >= effective_floor:
-                final_rec = round(rec_val, 2)
+            ai_optimal = round(active_rec.recommended_price, 2)
+            rec_type = "AI_OPTIMAL"
+            if ai_optimal >= effective_floor:
+                final_rec = ai_optimal
+                is_floor_fallback = False
             else:
                 # Active recommendation violates floor: elevate to safe floor
                 final_rec = effective_floor
+                is_floor_fallback = True
+                rec_type = "MARGIN_FLOOR"
         else:
-            # No active pending recommendation.
-            # Historical approved prices (including stale overrides like ELC-8812's ₹500)
-            # must NOT be presented as active safe recommendations.
-            # If current shelf price meets or exceeds the effective floor, current price is safe.
-            if current_p >= effective_floor:
-                final_rec = current_p
+            # Check if this product has no stored recommendation at all
+            if not approved_recs:
+                # Unrecommended item (e.g. SKU 9909) - invoke PricingService optimization path
+                try:
+                    margin_arg = min_margin_pct if min_margin_pct is not None else 25.0
+                    rec_calc = PricingService.calculate_product_recommendation(
+                        product=p,
+                        guardrails={"min_margin_pct": margin_arg}
+                    )
+                    ai_optimal = round(rec_calc["recommended_price"], 2)
+                    rec_type = "AI_OPTIMAL"
+                    final_rec = ai_optimal
+                    is_floor_fallback = (ai_optimal == effective_floor)
+                except Exception:
+                    ai_optimal = current_p
+                    final_rec = effective_floor if current_p < effective_floor else current_p
+                    is_floor_fallback = (final_rec == effective_floor and current_p < effective_floor)
+                    rec_type = "MARGIN_FLOOR" if is_floor_fallback else "CURRENT_PRICE"
             else:
-                final_rec = effective_floor
+                # Historical approved prices (including stale overrides like ELC-8812's ₹500)
+                # must NOT be presented as active safe recommendations.
+                # If current shelf price meets or exceeds the effective floor, current price is safe.
+                ai_optimal = approved_price
+                if current_p >= effective_floor:
+                    final_rec = current_p
+                    rec_type = "CURRENT_PRICE"
+                    is_floor_fallback = False
+                else:
+                    final_rec = effective_floor
+                    rec_type = "MARGIN_FLOOR"
+                    is_floor_fallback = True
 
         return {
             "recommended_price": final_rec,
+            "margin_floor": effective_floor,
+            "ai_optimal_price": ai_optimal,
+            "approved_price": approved_price,
+            "is_margin_floor_fallback": is_floor_fallback,
+            "recommendation_type": rec_type,
             "has_active_recommendation": has_active,
             "has_historical_override": has_override,
             "historical_override_price": override_price,
@@ -115,6 +151,11 @@ class ProductService:
             "dynamic_pricing": bool(p.dynamic_pricing if p.dynamic_pricing is not None else True),
             "status": st,
             "recommended_price": rec_info["recommended_price"],
+            "margin_floor": rec_info["margin_floor"],
+            "ai_optimal_price": rec_info["ai_optimal_price"],
+            "approved_price": rec_info["approved_price"],
+            "is_margin_floor_fallback": rec_info["is_margin_floor_fallback"],
+            "recommendation_type": rec_info["recommendation_type"],
             "has_active_recommendation": rec_info["has_active_recommendation"],
             "has_historical_override": rec_info["has_historical_override"],
             "historical_override_price": rec_info["historical_override_price"],
@@ -166,6 +207,10 @@ class ProductService:
     @staticmethod
     def create_product(db: Session, data: ProductCreate) -> dict:
         import time
+        if data.current_price is not None and data.current_price <= 0:
+            raise ValueError(f"current_price must be greater than zero: {data.current_price}")
+        if data.cost_price is not None and data.cost_price <= 0:
+            raise ValueError(f"cost_price must be greater than zero: {data.cost_price}")
         pid = f"prod-{int(time.time()) % 10000:04d}"
         product = Product(
             id=pid,
@@ -195,7 +240,14 @@ class ProductService:
         if not product:
             return None
 
-        update_dict = data.model_dump(exclude_unset=True)
+        update_dict = data.model_dump(exclude_unset=True) if hasattr(data, "model_dump") else (data.dict(exclude_unset=True) if hasattr(data, "dict") else dict(data))
+        if "current_price" in update_dict and update_dict["current_price"] is not None:
+            if update_dict["current_price"] <= 0:
+                raise ValueError(f"current_price must be greater than zero: {update_dict['current_price']}")
+        if "cost_price" in update_dict and update_dict["cost_price"] is not None:
+            if update_dict["cost_price"] <= 0:
+                raise ValueError(f"cost_price must be greater than zero: {update_dict['cost_price']}")
+
         for key, value in update_dict.items():
             if hasattr(product, key) and value is not None:
                 setattr(product, key, value)

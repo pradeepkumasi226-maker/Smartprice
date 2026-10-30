@@ -643,7 +643,8 @@ export const DashboardPage = () => {
                   filteredProducts.map((prod) => {
                     const price = prod.current_price || prod.currentPrice;
                     const cost = prod.cost || prod.baseCost;
-                    const rec = prod.recommendedPrice;
+                    const rec = prod.aiOptimalPrice ?? prod.recommendedPrice ?? price;
+                    const floor = prod.marginFloor ?? prod.margin_floor;
                     const priceDiff = rec - price;
                     const isSelected = selectedProductIds.includes(prod.id);
 
@@ -682,6 +683,11 @@ export const DashboardPage = () => {
                           </span>
                           <div style={{ fontSize: '0.72rem', color: priceDiff > 0 ? 'var(--success)' : 'var(--danger)' }}>
                             {formatCurrency(priceDiff, { showSign: true })}
+                            {floor && floor > price && (
+                              <span style={{ marginLeft: '0.35rem', color: 'var(--text-muted)', fontSize: '0.68rem' }}>
+                                (Floor: {formatCurrency(floor)})
+                              </span>
+                            )}
                           </div>
                         </td>
                         <td>

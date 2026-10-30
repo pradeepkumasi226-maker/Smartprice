@@ -9,8 +9,8 @@ class ProductBase(BaseModel):
     sku: str
     name: str
     category: str
-    current_price: float
-    cost_price: float
+    current_price: float = Field(..., gt=0, description="Current shelf price (must be > 0)")
+    cost_price: float = Field(..., gt=0, description="Unit cost price (must be > 0)")
     competitor_price: Optional[float] = 0.0
     stock_quantity: int = 0
     reorder_level: int = 30
@@ -27,8 +27,8 @@ class ProductCreate(ProductBase):
 class ProductUpdate(BaseModel):
     name: Optional[str] = None
     category: Optional[str] = None
-    current_price: Optional[float] = None
-    cost_price: Optional[float] = None
+    current_price: Optional[float] = Field(None, gt=0, description="Current shelf price (must be > 0)")
+    cost_price: Optional[float] = Field(None, gt=0, description="Unit cost price (must be > 0)")
     competitor_price: Optional[float] = None
     stock_quantity: Optional[int] = None
     reorder_level: Optional[int] = None
@@ -43,6 +43,11 @@ class ProductResponse(ProductBase):
     id: str
     status: Optional[str] = "Optimal"  # Optimal, Low Stock, Critical, Overstocked
     recommended_price: Optional[float] = None
+    margin_floor: Optional[float] = None
+    ai_optimal_price: Optional[float] = None
+    approved_price: Optional[float] = None
+    is_margin_floor_fallback: Optional[bool] = False
+    recommendation_type: Optional[str] = "AI_OPTIMAL"
     has_active_recommendation: Optional[bool] = False
     has_historical_override: Optional[bool] = False
     historical_override_price: Optional[float] = None

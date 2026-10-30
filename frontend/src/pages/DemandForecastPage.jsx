@@ -152,7 +152,7 @@ export const DemandForecastPage = () => {
   }, [productForecasts]);
 
   const horizonMultiplier = useMemo(() => {
-    return timeRange === '7d' ? 1.0 : timeRange === '30d' ? 4.2 : 12.5;
+    return timeRange === '7d' ? (7 / 30) : timeRange === '30d' ? 1.0 : 3.0;
   }, [timeRange]);
 
   const tableTotalUnits = useMemo(() => {

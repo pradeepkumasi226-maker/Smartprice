@@ -3,6 +3,21 @@
  * Computes live metrics across products, sales transactions, and inventory ledgers.
  */
 
+export const CANONICAL_CATEGORIES = [
+  'Apparel',
+  'Beauty & Care',
+  'Electronics',
+  'Home Goods',
+  'Sports & Outdoors'
+];
+
+export const CATEGORY_ALIAS_MAP = {
+  'Home & Kitchen': ['Home & Kitchen', 'Home Goods'],
+  'Home Goods': ['Home Goods', 'Home & Kitchen'],
+  'Health & Beauty': ['Health & Beauty', 'Beauty & Care'],
+  'Beauty & Care': ['Beauty & Care', 'Health & Beauty']
+};
+
 /**
  * Filter sales transactions by date horizon, category, and store branch
  */
@@ -11,9 +26,12 @@ export const filterSalesData = (sales = [], options = {}) => {
   const now = new Date('2026-08-19T23:59:59');
 
   return sales.filter(item => {
-    // Match Category
-    if (category !== 'All' && item.category !== category) {
-      return false;
+    // Match Category with canonical alias support
+    if (category !== 'All') {
+      const allowedCategories = CATEGORY_ALIAS_MAP[category] || [category];
+      if (!allowedCategories.includes(item.category)) {
+        return false;
+      }
     }
 
     // Match Store
@@ -215,11 +233,12 @@ export const reconcileFinancialMetrics = (headlineMetrics = {}, categoryBreakdow
 
 /**
  * Calculate Inventory Metrics:
- * Valuation = SUM(costPrice * stockQuantity), Total Units, Healthy Ratio, Low Stock, Out of Stock
+ * Wholesale Valuation = SUM(costPrice * stockQuantity), Retail Potential = SUM(sellingPrice * stockQuantity)
  */
 export const calculateInventoryMetrics = (productsList = []) => {
   let totalStockUnits = 0;
-  let warehouseValuation = 0;
+  let wholesaleCostValuation = 0;
+  let retailPotentialValuation = 0;
   let lowStockCount = 0;
   let criticalCount = 0;
   let healthyCount = 0;
@@ -228,11 +247,13 @@ export const calculateInventoryMetrics = (productsList = []) => {
   for (const p of productsList) {
     const stock = Number(p.stock !== undefined ? p.stock : (p.stockQuantity !== undefined ? p.stockQuantity : (p.stock_quantity || 0))) || 0;
     const cost = Number(p.cost !== undefined ? p.cost : (p.baseCost !== undefined ? p.baseCost : (p.costPrice !== undefined ? p.costPrice : (p.cost_price || 0)))) || 0;
+    const price = Number(p.currentPrice !== undefined ? p.currentPrice : (p.current_price !== undefined ? p.current_price : (p.price || 0))) || 0;
     const minStock = Number(p.minimum_stock !== undefined ? p.minimum_stock : (p.reorderLevel !== undefined ? p.reorderLevel : (p.reorder_level || 30))) || 30;
     const safety = Number(p.safetyStock !== undefined ? p.safetyStock : (p.safety_stock || Math.round(minStock * 0.4))) || Math.round(minStock * 0.4);
 
     totalStockUnits += stock;
-    warehouseValuation += (stock * cost);
+    wholesaleCostValuation += (stock * cost);
+    retailPotentialValuation += (stock * price);
 
     if (stock <= safety) {
       criticalCount++;
@@ -248,11 +269,15 @@ export const calculateInventoryMetrics = (productsList = []) => {
 
   const totalItems = productsList.length;
   const healthyPercentage = totalItems > 0 ? Math.round((healthyCount / totalItems) * 100) : 100;
+  const roundedWholesale = Math.round(wholesaleCostValuation * 100) / 100;
+  const roundedRetail = Math.round(retailPotentialValuation * 100) / 100;
 
   return {
     totalItems,
     totalStockUnits,
-    warehouseValuation: Math.round(warehouseValuation * 100) / 100,
+    warehouseValuation: roundedWholesale,
+    wholesaleCostValuation: roundedWholesale,
+    retailPotentialValuation: roundedRetail,
     lowStockItemsCount: lowStockCount,
     criticalItemsCount: criticalCount,
     overstockedItemsCount: overstockedCount,

@@ -79,6 +79,17 @@ export const normalizeProduct = (p) => {
     recommended_price,
     recommendedPrice: recommended_price,
 
+    margin_floor: Number(p.margin_floor ?? p.marginFloor ?? p.minimum_margin_floor ?? (cost_price > 0 ? (cost_price / 0.75).toFixed(2) : 0)),
+    marginFloor: Number(p.margin_floor ?? p.marginFloor ?? p.minimum_margin_floor ?? (cost_price > 0 ? (cost_price / 0.75).toFixed(2) : 0)),
+    ai_optimal_price: Number(p.ai_optimal_price ?? p.aiOptimalPrice ?? recommended_price),
+    aiOptimalPrice: Number(p.ai_optimal_price ?? p.aiOptimalPrice ?? recommended_price),
+    approved_price: p.approved_price !== undefined ? p.approved_price : (p.approvedPrice ?? null),
+    approvedPrice: p.approved_price !== undefined ? p.approved_price : (p.approvedPrice ?? null),
+    is_margin_floor_fallback: Boolean(p.is_margin_floor_fallback ?? p.isMarginFloorFallback),
+    isMarginFloorFallback: Boolean(p.is_margin_floor_fallback ?? p.isMarginFloorFallback),
+    recommendation_type: p.recommendation_type || p.recommendationType || 'AI_OPTIMAL',
+    recommendationType: p.recommendation_type || p.recommendationType || 'AI_OPTIMAL',
+
     predicted_demand,
     predictedDemand: predicted_demand,
 

@@ -56,7 +56,7 @@ openapi_url = None if settings.ENVIRONMENT == "production" else "/openapi.json"
 
 app = FastAPI(
     title="SmartPrice Explainable AI Retail Engine API",
-    description="Real-time dynamic pricing, inventory tracking, demand forecasting, and TreeSHAP explainability engine.",
+    description="Real-time dynamic pricing, inventory tracking, demand forecasting, and deterministic pricing rule attribution engine.",
     version="3.0.0",
     docs_url=docs_url,
     redoc_url=redoc_url,

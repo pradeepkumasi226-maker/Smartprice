@@ -201,7 +201,8 @@ const ProductDetailsDrawer = ({ product, onClose, onEdit, navigateTo }) => {
             ]},
             { title: 'AI Pricing', icon: Sparkles, rows: [
               ['Dynamic Pricing', product.dynamicPricing ? 'Active ✓' : 'Disabled'],
-              ['AI Recommended', formatCurrency(rec)],
+              ['AI Recommended', formatCurrency(product.aiOptimalPrice || rec)],
+              ['Margin Floor (25%)', formatCurrency(product.marginFloor || (cost > 0 ? (cost / 0.75).toFixed(2) : 0))],
               ['Price Lift', priceDiff >= 0 ? `+${formatCurrency(priceDiff)}` : formatCurrency(priceDiff)],
               ['AI Confidence', product.aiConfidence || '90%'],
               ['Elasticity (ε)', String(product.elasticity ?? '-1.25')],

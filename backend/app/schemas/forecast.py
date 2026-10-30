@@ -32,6 +32,10 @@ class ProductForecastSummary(BaseModel):
     days_of_supply: float
     sales_velocity: str
     elasticity: float
+    source_baseline_demand: Optional[int] = None
+    baseline_period: Optional[str] = "monthly_30d"
+    horizon_days: Optional[int] = None
+    scaling_formula: Optional[str] = None
 
 class ForecastResponse(BaseModel):
     time_range: str

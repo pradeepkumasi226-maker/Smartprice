@@ -19,6 +19,10 @@ class ReportService:
         avg_price = (total_rev / total_units) if total_units > 0 else 0.0
         avg_margin = ((total_profit / total_rev) * 100) if total_rev > 0 else 0.0
 
+        dates = [s.sale_date for s in sales if s.sale_date]
+        date_start = min(dates) if dates else "2026-01-15"
+        date_end = max(dates) if dates else "2026-08-18"
+
         # Store breakdown
         store_map = {}
         for s in sales:
@@ -101,6 +105,10 @@ class ReportService:
             "sum_category_profit": sum_cat_prof,
             "profit_formula": "revenue - cost",
             "margin_formula": "(profit / revenue) * 100",
+            "total_sales_transactions": len(sales),
+            "date_start": date_start,
+            "date_end": date_end,
+            "data_source": "SQLite Database (Historical Sales Table)",
             "store_breakdown": store_breakdown,
             "category_breakdown": category_breakdown,
             "pricing_compliance": {

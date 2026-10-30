@@ -250,7 +250,22 @@ class PricingService:
             comp_text = f"Competitor at ₹{comp_p:.2f}." if comp_p > 0 else "No competitor benchmark."
             rationale = f"Approved at target price ₹{current_p:.2f}. Live shelf price aligns with profit-optimal elasticity of {elasticity:.2f} ({e_label}). {inv_factor_text} {comp_text} Cost floor ₹{cost_floor:.2f} protected."
         elif stored_reason and not force_recalculate:
-            rationale = stored_reason
+            if stored_rec_price is not None and abs(optimal_p - stored_rec_price) > 0.01:
+                e_label = "inelastic" if abs(elasticity) < 1.0 else "moderately elastic" if abs(elasticity) <= 1.5 else "highly price-sensitive"
+                comp_text = f"Competitor at ₹{comp_p:.2f}." if comp_p > 0 else "No competitor benchmark."
+                rationale = (
+                    f"Prior stored price ₹{stored_rec_price:.2f} clamped to margin guardrail floor ₹{optimal_p:.2f}. "
+                    f"Elasticity {elasticity:.2f} ({e_label}). {inv_factor_text} {comp_text} Wholesale cost floor ₹{cost_floor:.2f} protected."
+                )
+            elif status == "Approved" and current_p != optimal_p:
+                e_label = "inelastic" if abs(elasticity) < 1.0 else "moderately elastic" if abs(elasticity) <= 1.5 else "highly price-sensitive"
+                comp_text = f"Competitor at ₹{comp_p:.2f}." if comp_p > 0 else "No competitor benchmark."
+                rationale = (
+                    f"Prior approved target ₹{optimal_p:.2f} differs from live shelf price ₹{current_p:.2f}. "
+                    f"Elasticity {elasticity:.2f} ({e_label}). {inv_factor_text} {comp_text} Wholesale cost floor ₹{cost_floor:.2f} protected."
+                )
+            else:
+                rationale = stored_reason
         else:
             e_label = "inelastic" if abs(elasticity) < 1.0 else "moderately elastic" if abs(elasticity) <= 1.5 else "highly price-sensitive"
             if delta > 0:

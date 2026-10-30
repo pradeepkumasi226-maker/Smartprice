@@ -1,0 +1,34 @@
+# ==============================================================================
+# SmartPrice Backend Production Dependencies (Pinned & Verified)
+# Tested on Python 3.12 (Windows & Linux)
+# ==============================================================================
+
+# Core Web Framework & ASGI Server
+fastapi==0.141.1
+starlette==1.6.0
+uvicorn[standard]==0.52.4
+
+# Database & ORM
+SQLAlchemy==2.0.52
+greenlet==3.5.5
+
+# Schema Validation & Configuration Management
+pydantic==2.13.4
+pydantic-core==2.46.4
+pydantic-settings==2.15.0
+python-dotenv==1.2.3
+
+# Security, Cryptography & Authentication
+bcrypt==5.0.0
+PyJWT==2.15.1
+
+# HTTP Client (Internal API integration & Webhook delivery)
+httpx==0.28.1
+httpcore==1.0.9
+certifi==2026.7.22
+idna==3.19
+anyio==4.14.2
+
+# Async Utilities & Typing
+typing_extensions==4.16.0
+

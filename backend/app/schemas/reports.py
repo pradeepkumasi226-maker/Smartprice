@@ -52,6 +52,10 @@ class ReportsSummaryResponse(BaseModel):
     sum_category_profit: Optional[float] = None
     profit_formula: Optional[str] = "revenue - cost"
     margin_formula: Optional[str] = "(profit / revenue) * 100"
+    total_sales_transactions: Optional[int] = 160
+    date_start: Optional[str] = "2026-01-15"
+    date_end: Optional[str] = "2026-08-18"
+    data_source: Optional[str] = "SQLite Database (Historical Sales Table)"
     store_breakdown: List[StoreSalesBreakdown]
     category_breakdown: List[CategorySalesBreakdown]
     pricing_compliance: PricingComplianceSummary

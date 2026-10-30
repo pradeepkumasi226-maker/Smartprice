@@ -69,7 +69,13 @@ class InventoryService:
 
         product_balances = []
         for p in products:
-            txs_for_p = db.query(InventoryTransaction).filter(InventoryTransaction.product_id == p.id).all()
+            txs_for_p = db.query(InventoryTransaction).filter(InventoryTransaction.product_id == p.id).order_by(InventoryTransaction.created_at.asc()).all()
+            op_txs = [
+                tx for tx in txs_for_p
+                if tx.user not in ["Test Runner", "Persistence Audit Runner", "E2E Tester"]
+                and not ("test" in (tx.notes or "").lower() or "audit" in (tx.notes or "").lower())
+            ]
+            test_txs = [tx for tx in txs_for_p if tx not in op_txs]
             product_balances.append({
                 "sku": p.sku,
                 "name": p.name,
@@ -79,7 +85,10 @@ class InventoryService:
                 "cost_valuation": round(p.stock_quantity * p.cost_price, 2),
                 "retail_valuation": round(p.stock_quantity * p.current_price, 2),
                 "ledger_transaction_count": len(txs_for_p),
-                "latest_snapshot": txs_for_p[-1].new_stock if txs_for_p else None
+                "operational_transaction_count": len(op_txs),
+                "test_transaction_count": len(test_txs),
+                "latest_snapshot": txs_for_p[-1].new_stock if txs_for_p else None,
+                "latest_operational_snapshot": op_txs[-1].new_stock if op_txs else p.stock_quantity
             })
 
         return {
@@ -98,11 +107,12 @@ class InventoryService:
                     "Product table (products.stock_quantity) is the authoritative live inventory on hand. "
                     "The transaction ledger is an immutable audit trail. Historical HOM-7193 balance snapshots "
                     "(e.g., 768, 788, 808, 828) reflect sequential test mutations executed by automated test runners "
-                    "prior to the canonical stock restoration to 248 units. All 55 ledger records are preserved for auditability."
+                    "prior to the canonical stock restoration to 248 units. All ledger records are preserved for auditability "
+                    "without altering historical data."
                 ),
                 "valuation_methodology": {
-                    "wholesale_cost": "SUM(stock_quantity * cost_price) = ₹90,983.50 (~₹90,984)",
-                    "retail_shelf": "SUM(stock_quantity * current_price) = ₹199,606.89 (~₹199,607)"
+                    "wholesale_cost": f"SUM(stock_quantity * cost_price) = ₹{cost_val:,.2f} (~₹{round(cost_val):,})",
+                    "retail_shelf": f"SUM(stock_quantity * current_price) = ₹{retail_val:,.2f} (~₹{round(retail_val):,})"
                 }
             },
             "reconciled_at": datetime.utcnow()

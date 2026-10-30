@@ -23,7 +23,12 @@ class ForecastService:
         if time_range not in ["7d", "30d", "90d"]:
             time_range = "7d"
 
-        horizon_multiplier = 1.0 if time_range == "7d" else 4.2 if time_range == "30d" else 12.5
+        # Monthly baseline conversion:
+        # predicted_demand is a monthly (30-day) baseline planning volume.
+        # 7d  => 7 / 30 of monthly baseline (~0.2333)
+        # 30d => 1.0 of monthly baseline (30 / 30)
+        # 90d => 3.0 of monthly baseline (90 / 30)
+        horizon_multiplier = (7.0 / 30.0) if time_range == "7d" else (3.0 if time_range == "90d" else 1.0)
 
         # Resolve target products
         product = None
@@ -50,16 +55,17 @@ class ForecastService:
             product_name = "All Catalog Products"
 
         # Calculate exact target horizon volume from product-level expectations
-        # For 7d: sum of p.predicted_demand
-        # For 30d: sum of round(p.predicted_demand * 4.2)
-        # For 90d: sum of round(p.predicted_demand * 12.5)
+        # Monthly baseline scaling:
+        # For 7d: sum of round(p.predicted_demand * 7 / 30)
+        # For 30d: sum of round(p.predicted_demand * 1.0)
+        # For 90d: sum of round(p.predicted_demand * 3.0)
         if catalog_products:
-            target_horizon_volume = sum(round(p.predicted_demand * horizon_multiplier) for p in catalog_products)
-            total_pred_base = sum(p.predicted_demand for p in catalog_products)
+            target_horizon_volume = sum(round((p.predicted_demand or 0) * horizon_multiplier) for p in catalog_products)
+            total_pred_base = sum((p.predicted_demand or 0) for p in catalog_products)
             if total_pred_base > 0:
-                unit_price = sum(p.current_price * p.predicted_demand for p in catalog_products) / total_pred_base
+                unit_price = sum(p.current_price * (p.predicted_demand or 0) for p in catalog_products) / total_pred_base
             else:
-                unit_price = sum(p.current_price for p in catalog_products) / len(catalog_products)
+                unit_price = sum(p.current_price for p in catalog_products) / max(1, len(catalog_products))
         else:
             target_horizon_volume = 100 if product_sku else 2755
             target_horizon_volume = round(target_horizon_volume * horizon_multiplier)
@@ -228,7 +234,8 @@ class ForecastService:
         products = query.all()
         summaries = []
 
-        horizon_multiplier = 1.0 if time_range == "7d" else 4.2 if time_range == "30d" else 12.5
+        horizon_multiplier = (7.0 / 30.0) if time_range == "7d" else (3.0 if time_range == "90d" else 1.0)
+        horizon_days = 7 if time_range == "7d" else (90 if time_range == "90d" else 30)
 
         for p in products:
             # Real historical sales from DB for this SKU
@@ -236,20 +243,25 @@ class ForecastService:
             hist_units = sum(s.quantity for s in sku_sales) if sku_sales else 0
             hist_rev = sum(s.revenue for s in sku_sales) if sku_sales else 0.0
 
-            # Predicted demand for horizon
-            pred_demand = round(p.predicted_demand * horizon_multiplier)
+            # Predicted demand for horizon scaled from monthly baseline
+            base_demand = p.predicted_demand or 0
+            pred_demand = round(base_demand * horizon_multiplier)
             proj_revenue = round(pred_demand * p.current_price, 2)
 
             # Legitimate uncertainty interval (P10 to P90)
-            lower_bound = max(1, round(pred_demand * 0.90))
+            lower_bound = max(1 if pred_demand > 0 else 0, round(pred_demand * 0.90))
             upper_bound = round(pred_demand * 1.15)
 
+            stock_qty = p.stock_quantity if p.stock_quantity is not None else 0
+            safety_stk = p.safety_stock if p.safety_stock is not None else 15
+            reorder_lvl = p.reorder_level if p.reorder_level is not None else 30
+
             # Daily demand rate to calculate days of supply
-            daily_rate = max(0.1, pred_demand / (7.0 if time_range == "7d" else 30.0 if time_range == "30d" else 90.0))
-            days_of_supply = round(p.stock_quantity / daily_rate, 1)
+            daily_rate = max(0.1, pred_demand / float(horizon_days)) if pred_demand > 0 else 0.0
+            days_of_supply = round(stock_qty / daily_rate, 1) if daily_rate > 0 else 999.0
 
             # Stockout risk classification
-            if p.stock_quantity <= p.safety_stock:
+            if stock_qty <= safety_stk:
                 stockout_risk = "Critical"
             elif days_of_supply < 7:
                 stockout_risk = "High"
@@ -273,11 +285,15 @@ class ForecastService:
                 "category": p.category,
                 "current_price": p.current_price,
                 "cost_price": p.cost_price,
-                "stock_quantity": p.stock_quantity,
-                "reorder_level": p.reorder_level,
-                "safety_stock": p.safety_stock,
+                "stock_quantity": stock_qty,
+                "reorder_level": reorder_lvl,
+                "safety_stock": safety_stk,
                 "historical_sales_units": hist_units,
                 "historical_revenue": round(hist_rev, 2),
+                "source_baseline_demand": base_demand,
+                "baseline_period": "monthly_30d",
+                "horizon_days": horizon_days,
+                "scaling_formula": f"predicted_demand * {horizon_days} / 30",
                 "predicted_demand_units": pred_demand,
                 "projected_revenue": proj_revenue,
                 "lower_bound_units": lower_bound,

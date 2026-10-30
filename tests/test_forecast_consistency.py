@@ -55,13 +55,17 @@ def run_tests():
     db = SessionLocal()
     try:
         catalog_prods = db.query(Product).all()
-        exp_7d = sum(round(p.predicted_demand * 1.0) for p in catalog_prods)
-        exp_30d = sum(round(p.predicted_demand * 4.2) for p in catalog_prods)
-        exp_90d = sum(round(p.predicted_demand * 12.5) for p in catalog_prods)
+        # Monthly baseline scaling (Fix #10):
+        # 7d  => 7 / 30 of monthly baseline (~0.2333)
+        # 30d => 1.0 of monthly baseline (30 / 30)
+        # 90d => 3.0 of monthly baseline (90 / 30)
+        exp_7d = sum(round(p.predicted_demand * (7.0 / 30.0)) for p in catalog_prods)
+        exp_30d = sum(round(p.predicted_demand * 1.0) for p in catalog_prods)
+        exp_90d = sum(round(p.predicted_demand * 3.0) for p in catalog_prods)
 
         elec_prods = db.query(Product).filter(Product.category == "Electronics").all()
         exp_elec_count = len(elec_prods)
-        exp_elec_7d = sum(round(p.predicted_demand * 1.0) for p in elec_prods)
+        exp_elec_7d = sum(round(p.predicted_demand * (7.0 / 30.0)) for p in elec_prods)
     finally:
         db.close()
 
@@ -202,14 +206,15 @@ def run_tests():
     sku_head = fc_sku.get("total_predicted_demand")
     sku_pts = sum(pt["predicted_demand"] for pt in fc_sku.get("points", []))
 
+    exp_tv_7d = round(370 * (7.0 / 30.0))  # 86 units scaled from 370 monthly
     assert_test(
-        sku_head == 370,
-        "ELC-8812 headline total matches product baseline (370 units, not 36)",
+        sku_head == exp_tv_7d,
+        f"ELC-8812 headline total matches 7-day velocity scaled from monthly baseline ({exp_tv_7d} units)",
         f"Headline: {sku_head}"
     )
     assert_test(
-        sku_pts == 370,
-        "ELC-8812 timeline points sum matches product baseline (370 units)",
+        sku_pts == exp_tv_7d,
+        f"ELC-8812 timeline points sum matches 7-day velocity scaled ({exp_tv_7d} units)",
         f"Points sum: {sku_pts}"
     )
     assert_test(
